@@ -5,19 +5,18 @@ tools:
   - Read
   - Glob
   - Grep
+  - Skill
   - mcp__figma__whoami
   - mcp__figma__get_metadata
   - mcp__figma__get_design_context
   - mcp__figma__get_screenshot
-  - mcp__figma__get_motion_context
+  - mcp__figma__get_variable_defs
   - mcp__figma__get_libraries
   - mcp__figma__search_design_system
   - mcp__figma__get_code_connect_map
   - mcp__figma__use_figma
 model: inherit
 permissionMode: default
-mcpServers:
-  - figma
 maxTurns: 60
 hooks:
   PreToolUse:
