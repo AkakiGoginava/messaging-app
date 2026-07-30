@@ -286,9 +286,12 @@ actions in one explicitly requested mode: `PREPARE BRANCH`, `DELIVER PR`, or
 
 ### Prerequisites
 
-- Ensure GitHub CLI is on `PATH` and `gh auth status` reports the intended
-  least-privilege account as authenticated. Restart Claude Code after installing
-  GitHub CLI or changing `PATH`.
+- Ensure GitHub CLI is on `PATH`, both project accounts are authenticated, and
+  `gh auth status` reports `akakiGoginavaAgent` as the active delivery account.
+  Keep `AkakiGoginava` inactive in GitHub CLI so that account remains eligible
+  to review agent-opened pull requests. Switch with
+  `gh auth switch --user akakiGoginavaAgent` when needed. Restart Claude Code
+  after installing GitHub CLI or changing `PATH`.
 - `PREPARE BRANCH` requires a user-marked `Ready` issue, approved Figma context
   when applicable, and a passing Issue Analyst result.
 - `DELIVER PR` requires Implementer, QA `PASS`, and Review handoffs with no
@@ -320,6 +323,8 @@ pushes to `main`, broad staging pathspecs, pushes to a branch other than the
 current Jira branch, commit pathspecs, local merges, agent approvals, automatic
 merges, administrator bypasses, command chaining, and unrelated shell commands.
 A squash merge always produces a separate interactive user confirmation.
+The Delivery Agent opens pull requests as `akakiGoginavaAgent` and requests
+`AkakiGoginava` as the human reviewer.
 
 Project permissions in `.claude/settings.json` deny Jira issue creation and
 field editing through Rovo MCP and require user confirmation before Jira

@@ -143,6 +143,21 @@ function Assert-AgentConfiguration {
         }
     }
 
+    $deliveryContent = Get-Content -LiteralPath (
+        Join-Path $agentDirectory "delivery.md"
+    ) -Raw
+    foreach ($requiredIdentity in @(
+        "akakiGoginavaAgent",
+        "AkakiGoginava"
+    )) {
+        if ($deliveryContent -notmatch [regex]::Escape($requiredIdentity)) {
+            throw (
+                "Delivery Agent must preserve the GitHub identity split for " +
+                "'$requiredIdentity'."
+            )
+        }
+    }
+
     Write-Output "All agent configuration checks passed."
 }
 

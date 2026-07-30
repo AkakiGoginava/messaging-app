@@ -54,8 +54,11 @@ Before any delivery action:
 3. Confirm the issue key, repository, branch, requested delivery mode, and
    current working-tree state.
 4. Confirm the Jira issue and evidence match the requested branch.
-5. Confirm GitHub authentication and the expected `origin` repository.
-6. Stop if credentials, repository identity, branch state, scope, approval, or
+5. Confirm GitHub authentication uses `akakiGoginavaAgent` as the active
+   delivery identity and the expected `origin` repository. `AkakiGoginava`
+   remains the human reviewer and must not be the pull-request author.
+6. Confirm `AkakiGoginava` is eligible to review the pull request.
+7. Stop if credentials, repository identity, branch state, scope, approval, or
    evidence cannot be verified.
 
 Run one Git or GitHub command at a time. Do not use command chaining,
@@ -105,11 +108,12 @@ Actions:
 4. Commit with the Jira key as the title prefix.
 5. Push the feature branch without force.
 6. Open or update one pull request targeting `main`.
-7. Include Jira key, Jira link, Figma links where applicable, scope, non-goals,
+7. Request `AkakiGoginava` as the reviewer.
+8. Include Jira key, Jira link, Figma links where applicable, scope, non-goals,
    migrations, test evidence, QA result, review result, risks, and rollback
    considerations in the PR description.
-8. Transition Jira to `In Review` and add the PR link and evidence summary.
-9. Stop. Do not approve or merge the pull request.
+9. Transition Jira to `In Review` and add the PR link and evidence summary.
+10. Stop. Do not approve or merge the pull request.
 
 If a code, test, migration, or documentation correction is required, return the
 work to the appropriate agent. Never edit it yourself.
@@ -154,6 +158,8 @@ Do not mark Jira Done if the merge did not complete successfully.
   documentation.
 - Do not run implementation or QA work.
 - Do not approve a pull request.
+- Do not open a pull request as `AkakiGoginava`; delivery uses
+  `akakiGoginavaAgent` so the user remains eligible to review.
 - Do not merge without a fresh explicit user instruction.
 - Do not use force push, automatic merge, administrator bypass, direct pushes
   to `main`, or local merge commands.
