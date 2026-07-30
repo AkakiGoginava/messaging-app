@@ -1,16 +1,30 @@
 # Messaging App Agent Guardrails
 
+## Project orientation
+
+This file provides durable project context for every Codex chat started from
+the repository root. Codex discovers it directly; Claude Code loads it through
+`CLAUDE.md`.
+
+Use `README.md` as the entry point for project setup, prerequisites, efficient
+handoffs, and the exact example invocation for each custom agent. Follow those
+invocation patterns when drafting a command for the user instead of inventing a
+different format.
+
+Keep chat-specific goals, artifact links, approval references, issue keys, and
+branch names in the current prompt or handoff. Do not add temporary task state
+to this file.
+
 ## Governing plan
 
 The authoritative Stage 1 scope and workflow are defined in:
 
 `docs/plans/Stage-1-Messaging-App-Plan-v1.3.md`
 
-Claude Code loads this file through `CLAUDE.md`. For normal role work, inspect
-only the plan sections needed for the current decision. Read the complete plan
-for setup or plan changes, and whenever scope, architecture, or instructions
-are ambiguous. When another instruction conflicts with the plan, stop and ask
-the user which source should prevail.
+For normal role work, inspect only the plan sections needed for the current
+decision. Read the complete plan for setup or plan changes, and whenever scope,
+architecture, or instructions are ambiguous. When another instruction
+conflicts with the plan, stop and ask the user which source should prevail.
 
 ## Stage 1 boundary
 
