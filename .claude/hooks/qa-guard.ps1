@@ -125,8 +125,6 @@ if ($toolName -in @("Edit", "Write")) {
         "^\.mcp\.json$",
         "^AGENTS\.md$",
         "^docs/plans(/|$)",
-        "^output/pdf(/|$)",
-        "^scripts/render_stage1_plan\.py$",
         "(^|/)\.env($|\.)",
         "\.(pem|key|p12|pfx)$",
         "(^|/)package\.json$",
@@ -175,6 +173,12 @@ if ($toolName -in @("Bash", "PowerShell")) {
         "(?i)(^|[\s;&|])gh(?:\.exe)?(\s|$)",
         "(?i)(^|[\s;&|])hub(?:\.exe)?(\s|$)",
         "(?i)(^|[\s;&|])jira(?:\.exe)?(\s|$)",
+        "(?i)(^|[\\/])(gh|hub|jira)(?:\.exe)?(?:['""]|\s|$)",
+        "(?i)\b(Set-Content|Add-Content|Out-File|Clear-Content|New-Item|Remove-Item|Copy-Item|Move-Item|Rename-Item)\b",
+        "(?i)(^|[\s;&|])(rm|mv|cp|touch|tee|truncate)(?:\.exe)?(\s|$)",
+        "(?i)\b(Invoke-Expression|iex)\b",
+        "(?i)\b(?:powershell|pwsh)(?:\.exe)?\b[^\r\n]*\b(?:EncodedCommand|enc)\b",
+        "(?i)\b(npm|pnpm|yarn)\s+(?:run\s+)?(?:format|format:write|lint:fix|fix)\b",
         "(?i)\b(npm|pnpm|yarn)\s+(install|add|remove|update|upgrade|uninstall|link|publish)\b",
         "(?i)\bdocker\s+push\b",
         "(?i)\bkubectl\s+(apply|delete|patch|replace|create)\b",
@@ -188,10 +192,8 @@ if ($toolName -in @("Bash", "PowerShell")) {
         "(?i)(^|[\\/])\.claude([\\/]|$)",
         "(?i)(^|[\\/])\.git([\\/]|$)",
         "(?i)(^|[\\/])docs[\\/]plans([\\/]|$)",
-        "(?i)(^|[\\/])output[\\/]pdf([\\/]|$)",
         "(?i)(^|[\\/])AGENTS\.md\b",
-        "(?i)(^|[\\/])\.mcp\.json\b",
-        "(?i)(^|[\\/])scripts[\\/]render_stage1_plan\.py\b"
+        "(?i)(^|[\\/])\.mcp\.json\b"
     )
 
     foreach ($pattern in $blockedCommandPatterns) {
