@@ -90,7 +90,7 @@ function Assert-GuardResult {
 function Assert-AgentConfiguration {
     $claudePath = Join-Path $projectPath "CLAUDE.md"
     $claudeContent = Get-Content -LiteralPath $claudePath -Raw
-    if ($claudeContent -notmatch "(?m)^@AGENTS\.md$") {
+    if ($claudeContent -notmatch "(?m)^@AGENTS\.md\r?$") {
         throw "CLAUDE.md must import AGENTS.md."
     }
 
