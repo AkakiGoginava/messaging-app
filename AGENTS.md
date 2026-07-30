@@ -4,13 +4,10 @@
 
 The authoritative Stage 1 scope and workflow are defined in:
 
-`docs/plans/Stage-1-Messaging-App-Plan-v1.3.md`
+`docs/plans/Stage-1-Messaging-App-Plan-v1.0.md`
 
-Claude Code loads this file through `CLAUDE.md`. For normal role work, inspect
-only the plan sections needed for the current decision. Read the complete plan
-for setup or plan changes, and whenever scope, architecture, or instructions
-are ambiguous. When another instruction conflicts with the plan, stop and ask
-the user which source should prevail.
+Read that plan before performing project work. When another instruction
+conflicts with it, stop and ask the user which source should prevail.
 
 ## Stage 1 boundary
 
@@ -35,17 +32,11 @@ Only the user may:
 
 Missing approval is a blocker, not permission to infer approval.
 
-Project permissions require a fresh user confirmation before any of the six
-custom agents can be spawned through Claude Code's `Agent` tool. Starting a
-session with `claude --agent <name>` is already an explicit user action.
-
 ## Role separation
 
 Agents must operate only within their named role:
 
-- Issue Analyst: story drafting and readiness analysis with read-only code and
-  Figma access; may add a human-confirmed Jira comment but cannot create,
-  transition, or mark an issue Ready.
+- Issue Analyst: read-only readiness analysis.
 - Implementer: production code and required tests on an authorized feature
   branch.
 - QA: validation and test-only changes.
@@ -55,30 +46,6 @@ Agents must operate only within their named role:
 - Figma Designer: design artifacts only.
 
 Do not delegate between these roles or absorb another role's responsibilities.
-
-## Context and evidence reuse
-
-An upstream handoff is a navigation index, not proof. Start by comparing its
-artifact snapshot with current state:
-
-- Jira: issue key, status, and updated timestamp.
-- Figma: file key, node IDs or direct links, and the user's approval reference.
-- Repository: branch, base and head commit when available, working-tree status,
-  and changed-file list.
-- Validation: commands, result, and the repository state they covered.
-
-Reuse unchanged summaries and direct links instead of fetching or rereading
-whole artifacts. Reinspect a source when a marker is missing or changed, the
-current role must independently validate it, or the source is needed for a
-decision. QA must independently execute applicable checks, Review must inspect
-the complete diff, and Delivery must reverify current approval and merge
-evidence.
-
-Every agent handoff must begin with the compact artifact snapshot above. Do not
-paste complete Jira issues, Figma payloads, diffs, logs, or test output when a
-direct link, file/line reference, command result, and concise finding suffice.
-Do not spend handoff context restating the role boundary; report any attempted
-or blocked out-of-role action only when it affected the result.
 
 ## Security
 

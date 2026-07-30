@@ -168,7 +168,7 @@ foreach ($pattern in $blockedPatterns) {
 
 $readOnlyGitPattern = "^(?i)git(?:\.exe)?\s+(status|diff|log|show|rev-parse|ls-remote)\b"
 $remoteReadPattern = "^(?i)git(?:\.exe)?\s+remote(?:\s*$|\s+(-v|show|get-url)\b)"
-$synchronizationPattern = "^(?i)git(?:\.exe)?\s+fetch\s+origin\s*$"
+$synchronizationPattern = "^(?i)git(?:\.exe)?\s+fetch\b"
 $fastForwardPullPattern = "^(?i)git(?:\.exe)?\s+pull\b[^\r\n]*--ff-only\b"
 $switchMainPattern = "^(?i)git(?:\.exe)?\s+switch\s+(main|master)\s*$"
 $switchFeaturePattern = "^(?i)git(?:\.exe)?\s+switch\s+(feature|fix|chore|test|docs|refactor|build|ci)/[A-Z][A-Z0-9]+-[0-9]+-[a-z0-9][a-z0-9-]*\s*$"
@@ -215,32 +215,17 @@ if ($command -match $featureMutationPattern) {
     $branch = Get-CurrentBranch -ProjectPath $projectPath
     $issueKey = Get-BranchIssueKey -Branch $branch
 
-    if ($command -match "^(?i)git(?:\.exe)?\s+add\b") {
-        $addMatch = [regex]::Match(
-            $command,
-            "^(?i)git(?:\.exe)?\s+add\s+--\s+(?<paths>.+)$"
-        )
-        if (-not $addMatch.Success) {
-            Block-Action "stage explicit approved paths using 'git add -- <paths>'"
-        }
-
-        $pathArguments = $addMatch.Groups["paths"].Value.Trim()
-        if (
-            $pathArguments -match "(^|\s)(?:\.|:/|-A|--all)(?:\s|$)" -or
-            $pathArguments -match "[*?\[\]]" -or
-            $pathArguments -match "(^|\s)--(?:\s|$)"
-        ) {
-            Block-Action "broad pathspecs are not allowed; name each approved path explicitly"
-        }
+    if (
+        $command -match "^(?i)git(?:\.exe)?\s+add\b" -and
+        $command -notmatch "^(?i)git(?:\.exe)?\s+add\s+--\s+\S"
+    ) {
+        Block-Action "stage explicit approved paths using 'git add -- <paths>'"
     }
 
     if ($command -match "^(?i)git(?:\.exe)?\s+commit\b") {
         $escapedIssueKey = [regex]::Escape($issueKey)
         if ($command -notmatch "(?i)\s-m\s+[`"']?$escapedIssueKey(?:\s|:|-)") {
             Block-Action "commit title must begin with Jira key $issueKey"
-        }
-        if ($command -match "\s--\s+\S") {
-            Block-Action "commit only the explicitly staged index; commit pathspecs are not allowed"
         }
 
         $stagedPaths = @(& git -C $projectPath diff --cached --name-only)
@@ -256,43 +241,12 @@ if ($command -match $featureMutationPattern) {
         }
     }
 
-    if ($command -match "^(?i)git(?:\.exe)?\s+push\b") {
-        $escapedBranch = [regex]::Escape($branch)
-        $allowedPushPatterns = @(
-            "^(?i)git(?:\.exe)?\s+push\s*$",
-            "^(?i)git(?:\.exe)?\s+push\s+origin\s+$escapedBranch\s*$",
-            "^(?i)git(?:\.exe)?\s+push\s+(?:-u|--set-upstream)\s+origin\s+$escapedBranch\s*$"
-        )
-
-        $isAllowedPush = $false
-        foreach ($pattern in $allowedPushPatterns) {
-            if ($command -match $pattern) {
-                $isAllowedPush = $true
-                break
-            }
-        }
-
-        if (-not $isAllowedPush) {
-            Block-Action "push only the current Jira branch to its matching origin branch"
-        }
-    }
-
     exit 0
 }
 
 if ($command -match $pullRequestWritePattern) {
     $branch = Get-CurrentBranch -ProjectPath $projectPath
     $issueKey = Get-BranchIssueKey -Branch $branch
-
-    if (
-        $command -match "^(?i)gh(?:\.exe)?\s+pr\s+(edit|ready|merge)\s+" -and
-        $command -notmatch "^(?i)gh(?:\.exe)?\s+pr\s+(edit|ready|merge)\s+-"
-    ) {
-        Block-Action (
-            "mutate only the pull request associated with the current Jira branch; " +
-            "explicit PR identifiers are not allowed"
-        )
-    }
 
     if ($command -match "^(?i)gh(?:\.exe)?\s+pr\s+create\b") {
         $escapedIssueKey = [regex]::Escape($issueKey)
