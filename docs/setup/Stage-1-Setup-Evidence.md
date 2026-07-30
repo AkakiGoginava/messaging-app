@@ -203,8 +203,10 @@ Record only connection status. Never copy authentication material.
 ### GitHub CLI
 
 - Status: `Verified`
-- Authenticated account: `AkakiGoginava` is active; `akakiGoginavaAgent` is
-  authenticated but inactive
+- Active delivery account: `akakiGoginavaAgent`
+- Human reviewer account: `AkakiGoginava` is authenticated but inactive in
+  GitHub CLI, keeping it eligible to review pull requests opened by the
+  delivery account
 - Git protocol: HTTPS
 - Verification date: 2026-07-30
 
@@ -214,7 +216,9 @@ Verify with:
 gh auth status
 ```
 
-Confirm the intended account is active. Do not record the token or its value.
+Confirm `akakiGoginavaAgent` is active for branch pushes, pull-request creation,
+and authorized merges. Confirm `AkakiGoginava` remains available as the human
+reviewer. Do not record either token or its value.
 
 ## Agent workflow
 

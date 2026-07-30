@@ -49,6 +49,12 @@ Only the user may:
 
 Missing approval is a blocker, not permission to infer approval.
 
+GitHub delivery uses `akakiGoginavaAgent` to push feature branches and open
+pull requests. The Delivery Agent must request `AkakiGoginava` as the human
+reviewer. Do not open an agent-delivered pull request as `AkakiGoginava`,
+because GitHub does not allow the pull-request author to approve their own
+change.
+
 Project permissions require a fresh user confirmation before any of the six
 custom agents can be spawned through Claude Code's `Agent` tool. Starting a
 session with `claude --agent <name>` is already an explicit user action.
