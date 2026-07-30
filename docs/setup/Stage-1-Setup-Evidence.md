@@ -38,12 +38,14 @@ gh repo view --json nameWithOwner,url,defaultBranchRef
 - Status: `Verified`
 - Ruleset URL:
   https://github.com/AkakiGoginava/messaging-app/rules/19967754
-- Target branches: All branches (`~ALL`)
+- Target branches: Default branch only (`~DEFAULT_BRANCH`, currently `main`)
 - Required approving reviews: 1
 - Required code-owner review: Yes
 - Required conversation resolution: Yes
 - Force-push protection: Yes (`non_fast_forward`)
 - Branch-deletion protection: Yes (`deletion`)
+- Feature branches are not targeted by this ruleset, so they can be pushed
+  directly and automatically deleted after merge.
 - Bypass actors: None listed by the ruleset API
 - Required status checks: `Not applicable yet` until CI is created
 - Allowed merge methods in ruleset: Merge, squash, and rebase; the Delivery
