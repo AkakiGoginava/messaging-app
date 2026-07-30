@@ -1,7 +1,7 @@
 # Stage 1 - Messaging MVP and Human-Gated Agent Workflow
 
-**Version:** 1.0  
-**Date:** 2026-07-28  
+**Version:** 1.3  
+**Date:** 2026-07-30  
 **Status:** Project foundation  
 **Source:** User-approved direction transferred from the prior project chat
 
@@ -9,6 +9,9 @@
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
+| 1.3 | 2026-07-30 | Project foundation | Removed generated PDF distribution and renderer requirements; Markdown is now the sole maintained plan artifact. |
+| 1.2 | 2026-07-30 | Project foundation | Defined the exact setup-phase Figma file, page, draft-section, access, and evidence-link requirements. |
+| 1.1 | 2026-07-30 | Project foundation | Aligned Issue Analyst permissions with the implemented comment-only workflow, added explicit agent-invocation confirmation, and defined setup-phase evidence verification. |
 | 1.0 | 2026-07-28 | Project foundation | Established the Stage 1 MVP boundary, architecture, delivery workflow, quality gates, and maintenance rules. |
 
 ## 1. Summary and MVP Boundary
@@ -114,13 +117,16 @@ and
 ## 3. Agents, Services, and Guardrails
 
 All development agents are custom Claude Code agents. The user invokes them
-individually; no coordinator agent, Jira trigger, unattended daemon, or
-event-driven orchestration is introduced.
+individually; project permissions require user confirmation before the `Agent`
+tool can spawn any of the six agents. A session started with
+`claude --agent <name>` is already an explicit user action. No coordinator
+agent, Jira trigger, unattended daemon, or event-driven orchestration is
+introduced.
 
 | Agent/service | Responsibility | Permissions and limits |
 |---|---|---|
 | Figma Design Agent | Draft responsive auth, conversation-list, chat, and state frames through Figma MCP | Figma write access; no Jira creation or code merge |
-| Issue Analyst Agent | Read an existing Jira item, Figma frames, and repository; verify Definition of Ready and prepare an implementation note | Read-only for code; may comment or transition Jira but cannot create the final task |
+| Issue Analyst Agent | Draft a story for user creation, or read an existing Jira item, Figma frames, and repository to verify Definition of Ready and prepare an implementation note | Read-only for code and Figma; may add a human-confirmed Jira comment; cannot create, edit, assign, transition, or mark an issue Ready |
 | Implementer Agent | Write production code, migrations, and required tests using Claude Code | Feature-branch writes only; cannot push to `main`, approve, or merge |
 | QA Agent | Run unit, integration, browser, accessibility, and security scenarios; add test-only changes | May edit tests; product-code failures return to the Implementer |
 | Review Agent | Independently inspect the diff for correctness, authorization, regressions, unnecessary scope, and acceptance-criteria coverage | Read-only; publishes blocking/non-blocking findings |
@@ -157,12 +163,29 @@ and
 2. Create a Jira project with `Backlog`, `Ready`, `In Progress`, `In Review`,
    and `Done`.
 3. Create the Stage 1 Jira epic.
-4. Create a Figma file with `Foundations`, `Flows`, and `Responsive Screens`
-   pages.
+4. Prepare the setup-phase Figma structure:
+   - Create one Figma Design file named `Messaging App`.
+   - Ensure the user owns or administers the file and the identity authenticated
+     through Figma MCP has edit access.
+   - Create exactly these top-level pages, preserving capitalization:
+     `Foundations`, `Flows`, and `Responsive Screens`.
+   - In `Flows`, create one section named `Agent Drafts`.
+   - In `Responsive Screens`, create one section named `Agent Drafts`.
+   - Treat both `Agent Drafts` sections as the only setup-authorized write
+     targets for the Figma Design Agent. Existing content elsewhere remains
+     human-owned.
+   - Record six non-secret links in
+     `docs/setup/Stage-1-Setup-Evidence.md`: the file, each of the three pages,
+     and each of the two `Agent Drafts` sections. Page links should identify the
+     selected page; section links should be copied from the selected section
+     and contain a `node-id`.
+   - Do not create components, variables, styles, flows, screen designs, or
+     approval records merely to complete setup. Those belong to later design
+     work, and file or section existence does not imply design approval.
 5. Connect Claude Code to the official Figma and Atlassian MCP servers and
    authenticate GitHub CLI with least-privilege access.
-6. Add the six Claude Code agent definitions and prohibit delegation between
-   them.
+6. Add the six Claude Code agent definitions, require user confirmation before
+   `Agent(<name>)` tool invocation, and prohibit delegation between roles.
 7. Establish the monorepo, Docker Compose environment, CI checks, issue
    template, and PR template through an initial enablement ticket.
 8. Create one independently mergeable Jira story per vertical slice:
@@ -172,6 +195,9 @@ and
    - Sending messages and idempotent persistence.
    - Realtime delivery, reconnection, and logout invalidation.
    - Responsive states, accessibility, and final security hardening.
+9. Complete `docs/setup/Stage-1-Setup-Evidence.md` for the setup artifacts that
+   exist at this phase. Mark later design, story, product, and CI evidence
+   `Not applicable yet` rather than treating it as a setup blocker.
 
 ### Design and task preparation
 
@@ -191,7 +217,8 @@ and
    key.
 2. The agent confirms the issue has approved Figma context, testable acceptance
    criteria, bounded scope, dependencies, and one-PR feasibility. It comments
-   and stops if anything is missing.
+   only after user confirmation and stops if anything is missing. It does not
+   transition the issue.
 3. Invoke the Delivery Agent to create `type/JIRA-KEY-short-description`, link
    the branch, and transition Jira to `In Progress`.
 4. Invoke the Implementer Agent. It reads Jira and Figma, implements only the
@@ -259,17 +286,16 @@ traces, and cross-browser support as documented in its
 - Deferred features remain absent from the implementation and backlog unless
   the user creates new work.
 
-### Updateable plan artifacts
+### Updateable plan artifact
 
-Maintain two synchronized deliverables:
+Maintain one authoritative deliverable:
 
-- `docs/plans/Stage-1-Messaging-App-Plan-v1.0.md` as the editable source.
-- `output/pdf/Stage-1-Messaging-App-Plan-v1.0.pdf` as the polished distribution
-  copy.
+- `docs/plans/Stage-1-Messaging-App-Plan-v1.3.md` as the editable and
+  distributable source.
 
 Future refinements update the Markdown source, append the revision history,
-increment the version, regenerate the PDF, render every PDF page to images for
-visual inspection, and verify its text and page count before release.
+increment the version, update repository references, and validate its structure
+and links. Generated PDF copies are not required or maintained.
 
 ### Assumptions
 
@@ -295,7 +321,7 @@ visual inspection, and verify its text and page count before release.
 | Message write path | REST only; Socket.IO broadcasts committed results |
 | Conversation uniqueness | Canonical participant-pair key with a database uniqueness constraint |
 | Delivery control | Human-reviewed, protected, squash-merged pull requests |
-| Agent orchestration | Manual invocation only; no unattended coordinator |
+| Agent orchestration | Manual invocation only; `Agent(<name>)` requires user confirmation and `claude --agent <name>` is user-started; no unattended coordinator |
 | Deployment | Deferred beyond Stage 1 |
 
 ## 7. Official References
@@ -309,5 +335,6 @@ visual inspection, and verify its text and page count before release.
 | OWASP Password Storage Cheat Sheet | [https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) |
 | Playwright testing | [https://playwright.dev/docs/intro](https://playwright.dev/docs/intro) |
 | Claude Code subagents | [https://code.claude.com/docs/en/sub-agents](https://code.claude.com/docs/en/sub-agents) |
+| Claude Code permissions | [https://code.claude.com/docs/en/permissions](https://code.claude.com/docs/en/permissions) |
 | Figma MCP server | [https://help.figma.com/hc/en-us/articles/32132100833559-Guide-to-the-Figma-MCP-server](https://help.figma.com/hc/en-us/articles/32132100833559-Guide-to-the-Figma-MCP-server) |
 | Atlassian Rovo MCP server | [https://developer.atlassian.com/cloud/rovo-mcp/](https://developer.atlassian.com/cloud/rovo-mcp/) |

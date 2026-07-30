@@ -1,10 +1,18 @@
 {
   "permissions": {
+    "disableBypassPermissionsMode": "disable",
+    "disableAutoMode": "disable",
     "deny": [
       "mcp__atlassian__createJiraIssue",
       "mcp__atlassian__editJiraIssue"
     ],
     "ask": [
+      "Agent(figma-designer)",
+      "Agent(issue-analyst)",
+      "Agent(implementer)",
+      "Agent(qa)",
+      "Agent(review)",
+      "Agent(delivery)",
       "mcp__atlassian__addCommentToJiraIssue",
       "mcp__atlassian__transitionJiraIssue",
       "mcp__figma__use_figma",
