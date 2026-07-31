@@ -27,14 +27,23 @@ function Get-GuardShellExecutable {
     # the fallback for machines that only ship the in-box interpreter. This
     # only resolves which executable runs the nested process — it does not
     # change any guard's allow/block logic.
+    # `Get-Command` can return more than one match for a bare executable
+    # name when several installations share the PATH (observed on
+    # ubuntu-latest: /opt/microsoft/powershell/7/pwsh, /usr/bin/pwsh, and
+    # /bin/pwsh simultaneously). Without narrowing to a single result,
+    # PowerShell's array-to-string coercion would join every match into one
+    # space-separated (and invalid) `FileName`, so always take exactly the
+    # first match.
     $pwshCommand = Get-Command -Name "pwsh" -CommandType Application `
-        -ErrorAction SilentlyContinue
+        -ErrorAction SilentlyContinue |
+        Select-Object -First 1
     if ($pwshCommand) {
         return $pwshCommand.Source
     }
 
     $windowsPowerShellCommand = Get-Command -Name "powershell.exe" `
-        -CommandType Application -ErrorAction SilentlyContinue
+        -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
     if ($windowsPowerShellCommand) {
         return $windowsPowerShellCommand.Source
     }
