@@ -31,6 +31,13 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma Client
+        # Explicit and not relying on @prisma/client's postinstall hook:
+        # type-aware lint/typecheck need the generated client's real types
+        # (without it, PrismaClient degrades to an unresolved type and
+        # trips @typescript-eslint/no-unsafe-call on PrismaService).
+        run: pnpm prisma:generate
+
       - name: Check formatting
         run: pnpm format:check
 
@@ -73,5 +80,8 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run agent guard regression checks
-        shell: pwsh
-        run: ./scripts/test_agent_guards.ps1
+        # Explicitly invoke PowerShell Core (preinstalled on GitHub-hosted
+        # ubuntu-latest runners as `pwsh`); do not rely on `powershell.exe`,
+        # which only exists on Windows, or on the step-level `shell: pwsh`
+        # directive alone.
+        run: pwsh -NoProfile -File ./scripts/test_agent_guards.ps1
