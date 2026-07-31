@@ -101,12 +101,11 @@ alone is not sufficient evidence of the workflow.
 
 ### Stage 1 epic
 
-- Status: `Pending`
+- Status: `Verified`
 - Epic key: `MA-1`
 - Epic URL: https://akakigoginava2808.atlassian.net/browse/MA-1
-- Created by the user: Not independently confirmed; reporter is Akaki Goginava
-- Scope verification: Pending; the epic is titled `Stage 1` but its description
-  is empty, so it does not yet identify the messaging MVP and deferred scope.
+- Created by the user: Independently confirmed; reporter is Akaki Goginava
+- Scope verification: Verified;
 - Verification date: 2026-07-30
 
 Open the epic directly and verify that it identifies the Stage 1 messaging MVP
@@ -115,6 +114,7 @@ without deferred features.
 ### Vertical-slice stories
 
 - Status: `Not applicable yet`
+- Project enablement—monorepo, local environment, CI, templates, and documentation: `Verified`
 - Registration, sign-in, session, and logout: `Not applicable yet`
 - User discovery and direct-conversation creation: `Not applicable yet`
 - Conversation list and persisted message history: `Not applicable yet`
@@ -247,9 +247,6 @@ loaded at session start do not automatically refresh.
 ## Setup completion decision
 
 - Overall status: `Pending`
-- Remaining setup blockers:
-  - Add the Stage 1 MVP boundary and deferred scope to Jira epic `MA-1`, and
-    confirm from Jira history that the user created it.
 - Items correctly marked `Not applicable yet`: CI status checks, approved Figma
   drafts, and the six vertical-slice stories
 - User review date: Pending
