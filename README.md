@@ -11,6 +11,120 @@ outside the current scope.
 Implementation should begin with the one-time setup and enablement ticket
 described in the plan.
 
+## Getting started
+
+### Prerequisites
+
+- Node.js 22 or later (Node.js 24 LTS is used in development; see `engines`
+  in the root `package.json`).
+- [pnpm](https://pnpm.io) 10 (`corepack enable` activates the version pinned
+  by `packageManager` in the root `package.json`).
+- [Docker](https://www.docker.com) and Docker Compose v2, for local
+  PostgreSQL.
+
+### Clean installation
+
+From a clean checkout, install dependencies using the committed lockfile
+without modifying it:
+
+```powershell
+pnpm install --frozen-lockfile
+```
+
+### Database startup
+
+1. Copy the root environment template and adjust values if needed (the
+   defaults are local-development-only placeholders, not real credentials):
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+2. Start PostgreSQL and wait for it to report healthy:
+
+   ```powershell
+   pnpm db:up
+   docker compose ps
+   ```
+
+3. Copy the API environment template (its default `DATABASE_URL` matches the
+   `docker-compose.yml` defaults):
+
+   ```powershell
+   Copy-Item apps/api/.env.example apps/api/.env
+   ```
+
+4. Apply migrations to the running database:
+
+   ```powershell
+   pnpm migrate:deploy
+   ```
+
+Stop the database with `pnpm db:down` (add `-v` manually via
+`docker compose down -v` to also remove the data volume).
+
+### Application startup
+
+Run both apps in development mode from the repository root:
+
+```powershell
+pnpm dev
+```
+
+- Web (Next.js): http://localhost:3000
+- API (NestJS): http://localhost:3001 (`PORT` in `apps/api/.env.example`)
+- API OpenAPI/Swagger document: http://localhost:3001/docs
+
+Each app also starts independently without a database connection or
+authentication configuration, for example `pnpm --filter @messaging-app/api
+run start:dev`.
+
+### Shared API types
+
+Regenerate the shared `@messaging-app/api-types` workspace from the API's
+OpenAPI document after changing any API contract:
+
+```powershell
+pnpm generate:api-types
+```
+
+### Validation commands
+
+Run from the repository root:
+
+| Check                      | Command                                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| Formatting                 | `pnpm format:check` (`pnpm format` to fix)                                                |
+| Linting                    | `pnpm lint`                                                                               |
+| Strict type checking       | `pnpm typecheck`                                                                          |
+| Unit/component tests       | `pnpm test`                                                                               |
+| Production builds          | `pnpm build`                                                                              |
+| Prisma schema validation   | `pnpm prisma:validate`                                                                    |
+| Migration deployment       | `pnpm migrate:deploy`                                                                     |
+| Docker Compose validation  | `docker compose config`                                                                   |
+| Shared API-type generation | `pnpm generate:api-types`                                                                 |
+| Agent guard regression     | `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\test_agent_guards.ps1` |
+
+GitHub Actions runs the equivalent checks, plus a clean-database migration
+deploy against a Docker Compose-managed PostgreSQL instance, on every pull
+request targeting `main`.
+
+### Common local-environment failures
+
+- **`pnpm install --frozen-lockfile` fails with a lockfile mismatch**: a
+  dependency was added without committing the updated `pnpm-lock.yaml`. Run
+  `pnpm install` locally, review the lockfile diff, and commit it.
+- **Prisma commands fail with a connection error**: PostgreSQL is not
+  running or `DATABASE_URL` in `apps/api/.env` does not match the Docker
+  Compose configuration. Run `pnpm db:up` and confirm `docker compose ps`
+  shows the `postgres` service as `healthy`.
+- **`docker compose up` fails to bind port 5432**: another local PostgreSQL
+  instance is already using the port. Set `POSTGRES_PORT` in the root `.env`
+  to a free port and update `DATABASE_URL` in `apps/api/.env` to match.
+- **`pnpm generate:api-types` fails**: it boots the API's Nest application
+  context without a database connection; a failure usually indicates a
+  TypeScript or module-wiring error in `apps/api/src`, not a database issue.
+
 ## Setup evidence
 
 Use the [Stage 1 setup evidence checklist](docs/setup/Stage-1-Setup-Evidence.md)

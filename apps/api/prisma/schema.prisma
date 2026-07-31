@@ -1,0 +1,15 @@
+// Prisma schema for the messaging application API.
+//
+// MA-2 (project enablement) owns only Prisma tooling, PostgreSQL
+// connectivity, and this infrastructure-only baseline migration. Product
+// entities (`User`, `Conversation`, `ConversationMember`, `Message`, and the
+// session store) are added by their owning vertical-slice stories.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

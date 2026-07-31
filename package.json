@@ -1,0 +1,40 @@
+{
+  "name": "messaging-app",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.30.2",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "generate:api-types": "pnpm --filter @messaging-app/api run generate:openapi && pnpm --filter @messaging-app/api-types run generate",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md}\" --ignore-unknown",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md}\" --ignore-unknown",
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+    "migrate:deploy": "pnpm --filter @messaging-app/api run prisma:migrate:deploy",
+    "migrate:dev": "pnpm --filter @messaging-app/api run prisma:migrate:dev",
+    "prisma:validate": "pnpm --filter @messaging-app/api run prisma:validate",
+    "prisma:generate": "pnpm --filter @messaging-app/api run prisma:generate"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2",
+    "turbo": "^2.5.9"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "@scarf/scarf",
+      "esbuild",
+      "prisma",
+      "sharp",
+      "unrs-resolver"
+    ]
+  }
+}
