@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Format, lint, typecheck, test, build, migrate
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://messaging_app:local_dev_only@localhost:5432/messaging_app?schema=public
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies (frozen lockfile)
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        # Explicit and not relying on @prisma/client's postinstall hook:
+        # type-aware lint/typecheck need the generated client's real types
+        # (without it, PrismaClient degrades to an unresolved type and
+        # trips @typescript-eslint/no-unsafe-call on PrismaService).
+        run: pnpm prisma:generate
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Strict type check
+        run: pnpm typecheck
+
+      - name: Generate shared API types
+        run: pnpm generate:api-types
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Production builds
+        run: pnpm build
+
+      - name: Validate Docker Compose configuration
+        run: docker compose config
+
+      - name: Start PostgreSQL and wait for healthy state
+        run: docker compose up -d --wait postgres
+
+      - name: Validate Prisma schema
+        run: pnpm prisma:validate
+
+      - name: Deploy migrations to a clean database
+        run: pnpm migrate:deploy
+
+      - name: Stop Docker Compose services
+        if: always()
+        run: docker compose down -v
+
+  agent-guards:
+    name: Agent guard regression checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run agent guard regression checks
+        # Explicitly invoke PowerShell Core (preinstalled on GitHub-hosted
+        # ubuntu-latest runners as `pwsh`); do not rely on `powershell.exe`,
+        # which only exists on Windows, or on the step-level `shell: pwsh`
+        # directive alone.
+        run: pwsh -NoProfile -File ./scripts/test_agent_guards.ps1

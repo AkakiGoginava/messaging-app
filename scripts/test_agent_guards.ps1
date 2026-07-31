@@ -17,6 +17,48 @@ if (-not $testRoot.StartsWith(
     throw "Refusing to create a guard-test directory outside the project tmp directory."
 }
 
+function Get-GuardShellExecutable {
+    # Guard checks are invoked in a nested PowerShell process so each guard
+    # hook is exercised exactly as Claude Code would run it: a fresh process
+    # fed the tool-call JSON on stdin, asserting on its real exit code and
+    # stdout. `pwsh` (PowerShell Core) is the interpreter both this
+    # repository's Linux CI runner and any modern PowerShell install have in
+    # common, so it is preferred; `powershell.exe` (Windows PowerShell) is
+    # the fallback for machines that only ship the in-box interpreter. This
+    # only resolves which executable runs the nested process — it does not
+    # change any guard's allow/block logic.
+    # `Get-Command` can return more than one match for a bare executable
+    # name when several installations share the PATH (observed on
+    # ubuntu-latest: /opt/microsoft/powershell/7/pwsh, /usr/bin/pwsh, and
+    # /bin/pwsh simultaneously). Without narrowing to a single result,
+    # PowerShell's array-to-string coercion would join every match into one
+    # space-separated (and invalid) `FileName`, so always take exactly the
+    # first match.
+    $pwshCommand = Get-Command -Name "pwsh" -CommandType Application `
+        -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($pwshCommand) {
+        return $pwshCommand.Source
+    }
+
+    $windowsPowerShellCommand = Get-Command -Name "powershell.exe" `
+        -CommandType Application -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($windowsPowerShellCommand) {
+        return $windowsPowerShellCommand.Source
+    }
+
+    throw (
+        "No PowerShell executable (pwsh or powershell.exe) was found to " +
+        "run guard checks."
+    )
+}
+
+$guardShellExecutable = Get-GuardShellExecutable
+$guardShellIsPwsh = (
+    [System.IO.Path]::GetFileNameWithoutExtension($guardShellExecutable)
+) -eq "pwsh"
+
 function Invoke-Guard {
     param(
         [string]$Guard,
@@ -31,9 +73,15 @@ function Invoke-Guard {
     } | ConvertTo-Json -Depth 6 -Compress
 
     $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
-    $startInfo.FileName = "powershell.exe"
+    $startInfo.FileName = $guardShellExecutable
+    # `-ExecutionPolicy` only applies to Windows PowerShell; pwsh does not
+    # enforce a restrictive default policy and does not accept the flag
+    # identically across platforms, so it is only added for powershell.exe.
+    $executionPolicyArgs = if ($guardShellIsPwsh) { "" } else {
+        "-ExecutionPolicy Bypass "
+    }
     $startInfo.Arguments = (
-        "-NoProfile -ExecutionPolicy Bypass -File `"$Guard`""
+        "-NoProfile $executionPolicyArgs-File `"$Guard`""
     )
     $startInfo.WorkingDirectory = $testRoot
     $startInfo.UseShellExecute = $false
