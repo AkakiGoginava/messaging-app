@@ -1,7 +1,7 @@
 {
   "permissions": {
     "disableBypassPermissionsMode": "disable",
-    "disableAutoMode": "disable",
+    "defaultMode": "auto",
     "allow": [
       "mcp__atlassian__*",
       "mcp__figma__*",
