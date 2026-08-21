@@ -1,7 +1,7 @@
 # Stage 1 - Messaging MVP and Human-Gated Agent Workflow
 
-**Version:** 1.3  
-**Date:** 2026-07-30  
+**Version:** 1.4  
+**Date:** 2026-08-03  
 **Status:** Project foundation  
 **Source:** User-approved direction transferred from the prior project chat
 
@@ -9,6 +9,7 @@
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
+| 1.4 | 2026-08-03 | Project foundation | Password policy changed to a 12-128 character minimum with at least one uppercase letter and one digit, replacing the plain 15-128 character length rule. |
 | 1.3 | 2026-07-30 | Project foundation | Removed generated PDF distribution and renderer requirements; Markdown is now the sole maintained plan artifact. |
 | 1.2 | 2026-07-30 | Project foundation | Defined the exact setup-phase Figma file, page, draft-section, access, and evidence-link requirements. |
 | 1.1 | 2026-07-30 | Project foundation | Aligned Issue Analyst permissions with the implemented comment-only workflow, added explicit agent-invocation confirmation, and defined setup-phase evidence verification. |
@@ -75,7 +76,8 @@ lockfile; dependency upgrades occur through separate Jira items.
   end-to-end tests.
 - The web application proxies HTTP and Socket.IO traffic to the API so browser
   authentication remains same-origin.
-- Passwords accept 15-128 characters and are stored only as Argon2id hashes.
+- Passwords accept 12-128 characters, require at least one uppercase letter
+  and one digit, and are stored only as Argon2id hashes.
   Sessions use PostgreSQL-backed opaque cookies with `HttpOnly`, `Secure` in
   HTTPS environments, and explicit `SameSite` protection.
 - Core entities: `User`, `Conversation`, `ConversationMember`, `Message`, and

@@ -19,7 +19,7 @@ to this file.
 
 The authoritative Stage 1 scope and workflow are defined in:
 
-`docs/plans/Stage-1-Messaging-App-Plan-v1.3.md`
+`docs/plans/Stage-1-Messaging-App-Plan-v1.4.md`
 
 For normal role work, inspect only the plan sections needed for the current
 decision. Read the complete plan for setup or plan changes, and whenever scope,
