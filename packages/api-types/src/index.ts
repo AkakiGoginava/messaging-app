@@ -20,11 +20,165 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create an account and start an authenticated session.
+         * @description A duplicate username answers 409 with `fieldErrors.username`. A duplicate email answers 409 with exactly the same status, body shape, and timing profile as an unexpected registration failure, so the response cannot be used to discover whether an email address is already registered.
+         */
+        post: operations["AuthController_register"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange an email-or-username and password for a session.
+         * @description Every rejection answers 401 with the same neutral message, whether the account is unknown or the password is wrong.
+         */
+        post: operations["AuthController_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Return the signed-in user for session restoration.
+         * @description Answers 401 rather than redirecting so the client can render the expired-session state without following a navigation.
+         */
+        get: operations["AuthController_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Destroy the current session server-side.
+         * @description The session record is deleted from the store before the cookie is cleared, so the previously issued cookie can no longer authenticate any request. On failure the client retries; it has no local force-sign-out fallback.
+         */
+        post: operations["AuthController_logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         HealthResponseDto: Record<string, never>;
+        RegisterDto: {
+            /**
+             * @description Public display name. 3–20 letters, numbers, or underscores.
+             * @example jordan_lee
+             */
+            username: string;
+            /**
+             * @description Email address. Stored lowercase-normalized; never disclosed by conflict responses.
+             * @example jordan@example.com
+             */
+            email: string;
+            /**
+             * Format: password
+             * @description 12–128 characters with at least one uppercase letter and one digit. Never returned or logged.
+             */
+            password: string;
+        };
+        AuthUserDto: {
+            /** Format: uuid */
+            id: string;
+            /** @example jordan_lee */
+            username: string;
+            /**
+             * Format: email
+             * @example jordan@example.com
+             */
+            email: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AuthSessionDto: {
+            user: components["schemas"]["AuthUserDto"];
+        };
+        ErrorResponseDto: {
+            /**
+             * @description Stable machine-readable error code.
+             * @example VALIDATION_FAILED
+             * @enum {string}
+             */
+            code: "VALIDATION_FAILED" | "USERNAME_TAKEN" | "REGISTRATION_FAILED" | "INVALID_CREDENTIALS" | "UNAUTHENTICATED" | "LOGOUT_FAILED" | "TOO_MANY_REQUESTS" | "INTERNAL_ERROR";
+            /**
+             * @description Human-readable message safe to display to the end user.
+             * @example Fix the highlighted fields to continue.
+             */
+            message: string;
+            /**
+             * @description Field-scoped messages keyed by request-body field name. Present only when the failure can be safely attributed to specific fields.
+             * @example {
+             *       "username": "This username is already taken."
+             *     }
+             */
+            fieldErrors?: {
+                [key: string]: string;
+            };
+        };
+        LoginDto: {
+            /**
+             * @description Email address or username.
+             * @example jordan@example.com
+             */
+            identifier: string;
+            /**
+             * Format: password
+             * @description Account password. Never returned or logged.
+             */
+            password: string;
+        };
+        LogoutResponseDto: {
+            /**
+             * @description Always true; the session was destroyed server-side.
+             * @example true
+             */
+            signedOut: boolean;
+        };
     };
     responses: never;
     parameters: never;
@@ -50,6 +204,138 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthResponseDto"];
+                };
+            };
+        };
+    };
+    AuthController_register: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegisterDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionDto"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    AuthController_login: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionDto"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    AuthController_me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSessionDto"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
+                };
+            };
+        };
+    };
+    AuthController_logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoutResponseDto"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponseDto"];
                 };
             };
         };

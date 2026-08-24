@@ -16,6 +16,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://messaging_app:local_dev_only@localhost:5432/messaging_app?schema=public
+      # CI-only, non-secret placeholder. The API refuses to boot without a
+      # session signing key; nothing here protects real user data, and real
+      # environments must supply their own random value.
+      SESSION_SECRET: ci_only_not_a_secret
+      # Next.js evaluates `rewrites()` at build time and serialises the result
+      # into the routes manifest, so the same-origin proxy target must be set
+      # for `pnpm build` as well as for the server the browser tests start.
+      # Job-level scope keeps those two in agreement.
+      API_ORIGIN: http://127.0.0.1:3001
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,6 +76,31 @@ jobs:
 
       - name: Deploy migrations to a clean database
         run: pnpm migrate:deploy
+
+      - name: API integration tests
+        # Testcontainers starts its own throwaway PostgreSQL, independent of
+        # the Compose service above.
+        run: pnpm test:api:e2e
+
+      - name: Install Playwright browsers
+        # Only Chromium is needed: the browser suite covers the two reference
+        # widths through viewport projects, not through separate engines.
+        run: pnpm --filter @messaging-app/web exec playwright install --with-deps chromium
+
+      - name: Browser tests (Playwright + axe)
+        # Runs against the real stack: the built API from `pnpm build`, the
+        # migrated Compose PostgreSQL above, and the production Next.js
+        # server, so the same-origin proxy and the session cookie are
+        # genuinely exercised. Playwright starts both servers itself.
+        run: pnpm test:web:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
 
       - name: Stop Docker Compose services
         if: always()

@@ -1,20 +1,19 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Inter } from 'next/font/google';
+
+import { AppProviders } from '@/components/providers';
+
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+// Inter is the typeface the approved auth frames are drawn in.
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
   title: 'Messaging App',
-  description: 'Stage 1 messaging application skeleton.',
+  description: 'Stage 1 messaging application.',
 };
 
 export default function RootLayout({
@@ -23,11 +22,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <body className="bg-app-bg text-fg flex min-h-full flex-col">
+        <AppProviders>{children}</AppProviders>
+      </body>
     </html>
   );
 }

@@ -16,6 +16,14 @@ next-env.d.ts
 # testing
 coverage/
 
+# playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+# Session and account fixtures written by the browser-test global setup.
+apps/web/e2e/.auth/
+
 # environment files (never commit real values)
 .env
 .env.*

@@ -1,26 +1,42 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+ * Design tokens transcribed from the approved auth designs (Figma file
+ * SPnGuNbO2fWr3Aqmol3BJF, node 17:2, approved 2026-08-21). Names follow the
+ * Simple Design System tokens the frames are built on.
+ *
+ * The auth surfaces are light-only by design; there is no dark variant in
+ * the approved frames, so these values are fixed rather than theme-aware.
+ */
+@theme {
+  --color-app-bg: #f5f5f5;
+  --color-surface: #ffffff;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-fg: #1e1e1e;
+  --color-fg-secondary: #757575;
+  --color-fg-tertiary: #b3b3b3;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-line: #d9d9d9;
+
+  --color-brand: #2c2c2c;
+  --color-brand-fg: #f5f5f5;
+
+  --color-danger: #900b09;
+  --color-danger-surface: #fdecec;
+
+  --color-success: #036b26;
+  --color-success-surface: #e8f6ee;
+
+  --color-muted-surface: #e3e3e3;
+  --color-disabled-surface: #d9d9d9;
+  --color-disabled-line: #b3b3b3;
+  --color-disabled-fg: #b3b3b3;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-app-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
 }
