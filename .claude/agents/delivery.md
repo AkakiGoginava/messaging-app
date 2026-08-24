@@ -126,8 +126,8 @@ Do not use this mode to bypass QA, Review, or approval. Promoting the draft to
 a reviewable pull request happens only in `DELIVER PR`, after the required
 evidence exists.
 
-The delivery guard rejects newlines in a command, so pass a single-line
-description. If a longer description is required, leave it for `DELIVER PR`.
+A single-line `--body` is sufficient for a draft. The guard rejects newlines in
+a command, so use `--body-file` if the description needs more than one line.
 
 ## DELIVER PR
 
@@ -154,7 +154,11 @@ Actions:
 7. Request `AkakiGoginava` as the reviewer.
 8. Include Jira key, Jira link, Figma links where applicable, scope, non-goals,
    migrations, test evidence, QA result, review result, risks, and rollback
-   considerations in the PR description.
+   considerations in the PR description. That description cannot be passed
+   inline, because the guard rejects newlines in a command. Pass it with
+   `--body-file`, using the path supplied in your invocation. Stop and ask if
+   no body file was supplied; never substitute a shortened single-line
+   description for the required one.
 9. Transition Jira to `In Review` and add the PR link and evidence summary.
 10. Stop. Do not approve or merge the pull request.
 

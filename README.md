@@ -453,7 +453,7 @@ Implementer handoff.
 
 ```text
 Use the delivery agent in DELIVER PR mode for PROJECT-123 using the Implementer,
-QA, and Review handoffs.
+QA, and Review handoffs. The pull-request description is at <path>\pr-body.md.
 ```
 
 ```text
@@ -483,8 +483,19 @@ transition, and GitHub refuses to merge a draft. Only `DELIVER PR` promotes the
 draft with `gh pr ready`, and it still requires QA `PASS` and a clean Review.
 A green CI run is never a substitute for either.
 
-The guard rejects newlines in a command, so a pull-request description passed
-on the command line must be a single line.
+The guard rejects newlines in a command, so a multi-line pull-request
+description must be passed with `--body-file`. Because that content reaches a
+public pull request without appearing on the command line, the guard validates
+the file itself: it must be `.md` or `.txt`, must not be a `.env` file or a
+key/certificate, must be non-empty and under 64 KB, must contain
+`Key: <JIRA-KEY>`, and must not contain a credential-shaped string such as a
+GitHub token, AWS access key ID, Slack token, or PEM private-key header. The
+same validation applies to `gh pr create` and `gh pr edit`.
+
+Supply the body file path in the `DELIVER PR` invocation and keep the file
+outside the repository working tree so it cannot be committed. The Delivery
+Agent has no file-writing tool and will stop rather than invent a shortened
+description.
 The Delivery Agent opens pull requests as `akakiGoginavaAgent` and requests
 `AkakiGoginava` as the human reviewer.
 
