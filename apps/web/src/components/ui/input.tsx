@@ -23,12 +23,15 @@ export function Input({ className, invalid = false, ...props }: InputProps) {
       aria-invalid={invalid || undefined}
       className={cn(
         'h-10 w-full rounded-lg border px-3 text-base',
-        'bg-surface text-fg placeholder:text-fg-tertiary',
+        // Placeholder text is not exempt from the contrast requirement, so
+        // it uses the secondary text token rather than a lighter grey.
+        'bg-surface text-fg placeholder:text-fg-secondary',
         'outline-none',
         'focus-visible:ring-brand focus-visible:border-brand focus-visible:ring-2',
         'disabled:bg-disabled-surface disabled:text-disabled-fg',
         'disabled:border-disabled-line disabled:cursor-not-allowed',
-        invalid ? 'border-danger' : 'border-line',
+        // The inline role of danger, matching the field error text below it.
+        invalid ? 'border-field-error' : 'border-line',
         className,
       )}
       {...props}

@@ -61,7 +61,7 @@ export function AppShell({
           >
             {user.username.charAt(0).toUpperCase()}
           </span>
-          <span className="text-fg text-base">{user.username}</span>
+          <span className="text-fg-strong text-base">{user.username}</span>
           <Button
             variant="ghost"
             onClick={requestLogout}
@@ -74,7 +74,14 @@ export function AppShell({
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col gap-4 p-8">
+      {/*
+        The approved frames paint the content column on the white surface,
+        not on the page background. Setting it here rather than on each
+        child keeps every descendant — including the placeholder below and
+        whatever the conversation-list slice adds — on the surface the
+        design's contrast ratios were calculated against.
+      */}
+      <main className="bg-surface flex flex-1 flex-col gap-4 p-8">
         {logout.isError ? (
           <div className="flex flex-col items-start gap-4">
             <Alert className="w-full">{AuthCopy.logout.failed}</Alert>

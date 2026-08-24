@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import { AuthCopy } from '../../src/features/auth/messages';
 
 import { readAccounts } from '../support/accounts';
+import { appAlerts } from '../support/alerts';
 
 test.describe('Sign-in', () => {
   test('signs in and lands on the authenticated shell', async ({ page }) => {
@@ -34,7 +35,12 @@ test.describe('Sign-in', () => {
     await page.getByRole('button', { name: AuthCopy.signIn.submit }).click();
 
     await expect(page.getByText(AuthCopy.failure.signIn)).toBeVisible();
-    await expect(page.getByRole('alert')).toHaveCount(1);
+
+    // The neutral banner is the only thing announced. A second alert would
+    // mean the failure is read out twice, and an inline field error would
+    // hint at which half of the credential pair was wrong.
+    await expect(appAlerts(page)).toHaveCount(1);
+    await expect(appAlerts(page)).toHaveText(AuthCopy.failure.signIn);
 
     // Neither field is singled out, so the banner cannot be used to work out
     // whether the account exists.

@@ -9,6 +9,9 @@ import { cn } from '@/lib/utils';
 const alertVariants = cva('rounded-lg px-4 py-3 text-base', {
   variants: {
     tone: {
+      // `text-danger` is the banner role of the split danger token: it is
+      // tuned for `bg-danger-surface`, not for the plain card surface that
+      // inline field errors use.
       danger: 'bg-danger-surface text-danger',
       success: 'bg-success-surface text-success font-semibold',
     },

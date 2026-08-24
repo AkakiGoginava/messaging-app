@@ -50,6 +50,20 @@ describe('AppShell', () => {
     ).toBeInTheDocument();
   });
 
+  it('paints the content region on the surface, not the page background', () => {
+    renderWithProviders(<AppShell user={user} />);
+
+    // The approved frames put the content column on #ffffff. Letting it
+    // inherit the page background is what dropped the placeholder text
+    // below AA, and it did so in the default and logout-error states alike.
+    const content = screen.getByRole('main');
+    expect(content).toHaveClass('bg-surface');
+    expect(content).not.toHaveClass('bg-app-bg');
+    expect(content).toContainElement(
+      screen.getByText(AuthCopy.shell.contentPlaceholder),
+    );
+  });
+
   it('signs out immediately on click, with no confirmation step', async () => {
     const interaction = userEvent.setup();
     const { calls } = stubFetch([{ status: 200, body: { signedOut: true } }]);

@@ -56,7 +56,9 @@ export function FormField({
       />
 
       {error ? (
-        <p id={errorId} role="alert" className="text-danger text-base">
+        // Inline errors sit on the plain card surface, so they use
+        // `field-error` rather than the banner's on-danger-surface red.
+        <p id={errorId} role="alert" className="text-field-error text-base">
           {error}
         </p>
       ) : null}

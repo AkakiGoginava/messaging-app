@@ -1,35 +1,66 @@
 @import "tailwindcss";
 
 /*
- * Design tokens transcribed from the approved auth designs (Figma file
- * SPnGuNbO2fWr3Aqmol3BJF, node 17:2, approved 2026-08-21). Names follow the
- * Simple Design System tokens the frames are built on.
+ * Design tokens for the auth surfaces.
+ *
+ * Transcribed from the corrected palette the user approved on 2026-08-24,
+ * captured as the token-reference specimen in Figma file
+ * SPnGuNbO2fWr3Aqmol3BJF, node 137:524. That palette supersedes the colour
+ * values previously claimed here: six of them never matched the auth frames
+ * (node 17:2, approved 2026-08-21), and three of the text/background pairs
+ * they produced fell below WCAG 2.1 AA.
+ *
+ * Every text token below sits at or above 4.5:1 on every background this
+ * design actually paints it on. The only exemption is `--color-disabled-fg`
+ * on `--color-disabled-surface`, because disabled controls are exempt from
+ * the contrast requirement. `src/app/design-tokens.test.ts` enforces both
+ * rules against this file.
+ *
+ * There is exactly one page background, one surface, and one secondary text
+ * token. Clearing 4.5:1 on `--color-app-bg` caps relative luminance at
+ * 0.1738 and `--color-fg-secondary` is already at 0.1511, so no lighter text
+ * tier can pass: the retired `--color-fg-tertiary` is deliberately absent.
+ * Hierarchy below `--color-fg-secondary` must come from size and weight,
+ * never from lightness.
  *
  * The auth surfaces are light-only by design; there is no dark variant in
  * the approved frames, so these values are fixed rather than theme-aware.
  */
 @theme {
-  --color-app-bg: #f5f5f5;
+  --color-app-bg: #f3f4f6;
   --color-surface: #ffffff;
 
-  --color-fg: #1e1e1e;
-  --color-fg-secondary: #757575;
-  --color-fg-tertiary: #b3b3b3;
+  --color-fg: #12171f;
+  /* The shell header username, one step down from headings. */
+  --color-fg-strong: #33363d;
+  --color-fg-secondary: #656d7a;
 
   --color-line: #d9d9d9;
 
   --color-brand: #2c2c2c;
   --color-brand-fg: #f5f5f5;
 
-  --color-danger: #900b09;
+  /*
+   * Danger is two roles, not one, because the design draws a different red
+   * in each context:
+   *   `--color-danger`       banner text, only ever on `--color-danger-surface`
+   *   `--color-field-error`  inline field error text and the invalid input
+   *                          border, only ever on `--color-surface`
+   * Both clear AA on both backgrounds, so picking the wrong one is a
+   * fidelity defect no contrast check can catch. The names are therefore
+   * kept distinct rather than sharing one `danger` token.
+   */
+  --color-danger: #b42318;
   --color-danger-surface: #fdecec;
+  --color-field-error: #900b09;
 
-  --color-success: #036b26;
-  --color-success-surface: #e8f6ee;
+  --color-success: #027a48;
+  --color-success-surface: #ecfdf2;
 
   --color-muted-surface: #e3e3e3;
   --color-disabled-surface: #d9d9d9;
   --color-disabled-line: #b3b3b3;
+  /* Retained at the retired tertiary grey: disabled controls are WCAG-exempt. */
   --color-disabled-fg: #b3b3b3;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;

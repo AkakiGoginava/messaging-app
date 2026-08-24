@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import { AuthCopy } from '../../src/features/auth/messages';
 
 import { buildAccount, readAccounts } from '../support/accounts';
+import { appAlerts } from '../support/alerts';
 
 /**
  * Registration flows against the real API. Each spec that registers spends
@@ -75,8 +76,11 @@ test.describe('Registration', () => {
     await expect(page.getByText(AuthCopy.failure.register)).toBeVisible();
 
     // Exactly one banner, nothing attached to the email field, and no copy
-    // anywhere that would confirm the address is already registered.
-    await expect(page.getByRole('alert')).toHaveCount(1);
+    // anywhere that would confirm the address is already registered. A second
+    // alert would both announce the failure twice and risk pointing at a
+    // field.
+    await expect(appAlerts(page)).toHaveCount(1);
+    await expect(appAlerts(page)).toHaveText(AuthCopy.failure.register);
     await expect(
       page.getByLabel(AuthCopy.register.emailLabel),
     ).not.toHaveAttribute('aria-invalid', 'true');

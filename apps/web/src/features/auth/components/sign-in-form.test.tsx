@@ -167,6 +167,8 @@ describe('SignInForm', () => {
 
     const banner = await screen.findByRole('alert');
     expect(banner).toHaveTextContent(AuthCopy.failure.signIn);
+    // One alert only. A second would announce the failure twice, and an
+    // inline error would have to be attached to one of the two fields.
     expect(screen.getAllByRole('alert')).toHaveLength(1);
 
     // Neither field is singled out, so the response cannot be used to work
@@ -177,6 +179,12 @@ describe('SignInForm', () => {
     expect(
       screen.getByLabelText(AuthCopy.signIn.passwordLabel),
     ).not.toHaveAttribute('aria-invalid');
+    expect(
+      screen.getByLabelText(AuthCopy.signIn.identifierLabel),
+    ).not.toHaveAccessibleDescription();
+    expect(
+      screen.getByLabelText(AuthCopy.signIn.passwordLabel),
+    ).not.toHaveAccessibleDescription();
   });
 
   it('shows the same banner for an unknown account as for a wrong password', async () => {
