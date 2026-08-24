@@ -5,11 +5,37 @@
     "allow": [
       "mcp__atlassian__*",
       "mcp__figma__*",
-      "mcp__plugin_figma_figma__*"
+      "mcp__plugin_figma_figma__*",
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(cd:*)",
+      "Bash(pwd)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(find:*)",
+      "Bash(wc:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git rev-parse:*)",
+      "PowerShell(Get-Location)",
+      "PowerShell(Get-ChildItem:*)",
+      "PowerShell(Get-Content:*)",
+      "PowerShell(Select-String:*)",
+      "PowerShell(Test-Path:*)"
     ],
     "deny": [
       "mcp__atlassian__createJiraIssue",
-      "mcp__atlassian__editJiraIssue"
+      "mcp__atlassian__editJiraIssue",
+      "Read(**/.env)",
+      "Read(**/*.pem)",
+      "Read(**/*.key)"
     ],
     "ask": [
       "Agent(figma-designer)",

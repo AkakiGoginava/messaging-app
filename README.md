@@ -138,6 +138,18 @@ one of the six custom agents through the `Agent` tool, including automatic
 delegation. Starting Claude Code with `claude --agent <name>` remains available
 because launching that command is itself an explicit user action.
 
+Project permissions also auto-approve read-only inspection inside the project
+directory, so agents do not prompt to navigate or read the codebase. This
+covers `Read`, `Glob`, and `Grep`, the shell equivalents `cd`, `pwd`, `ls`,
+`cat`, `head`, `tail`, `grep`, `rg`, `find`, and `wc`, the read-only Git
+commands `status`, `diff`, `log`, `show`, and `rev-parse`, and their PowerShell
+counterparts. Every mutating command still requires confirmation, and each
+agent's scoped hook still runs on every `Edit`, `Write`, `Bash`, and
+`PowerShell` call regardless of permission mode, so this changes prompting
+only and never widens a role boundary. Reading `.env`, `*.pem`, and `*.key` is
+denied outright to keep credentials out of transcripts; `.env.example` remains
+readable.
+
 Run the guard regression checks after changing any agent hook:
 
 ```powershell
@@ -309,8 +321,21 @@ feature/PROJECT-123-short-description branch.
 The scoped guard in `.claude/hooks/implementer-guard.ps1` blocks work outside a
 Jira-keyed feature branch, protected project-governance files, Git delivery
 commands, Jira commands, publishing, direct shell-based content rewriting, and
-broad destructive commands. The Implementer leaves an uncommitted working tree
-for the QA Agent.
+broad destructive commands.
+
+The Implementer works in vertically ordered increments and validates each one
+before starting the next, rather than deferring all validation to the end, so
+an interrupted run leaves a verified partial state.
+
+A run can end at a turn limit the agent cannot observe, so do not rely on it to
+stop and summarize on its own. Scope each invocation to a specific increment
+and keep the remaining increment list outside the agent. A slice larger than
+one run is resumed on the same branch with a new scope, never restarted: state
+what is already on disk so the resumed run does not rebuild it, and name the
+files it must not touch. After a truncated run, read the working tree to
+establish real progress rather than trusting the agent's last message.
+
+The Implementer leaves an uncommitted working tree for the QA Agent.
 
 ### Handoff
 
@@ -395,8 +420,8 @@ regression assessments; and re-review conditions.
 
 The Delivery Agent is defined in `.claude/agents/delivery.md`. It performs
 controlled branch, commit, push, pull-request, Jira-transition, and squash-merge
-actions in one explicitly requested mode: `PREPARE BRANCH`, `DELIVER PR`, or
-`MERGE APPROVED PR`.
+actions in one explicitly requested mode: `PREPARE BRANCH`, `DRAFT PR FOR CI`,
+`DELIVER PR`, or `MERGE APPROVED PR`.
 
 ### Prerequisites
 
@@ -408,6 +433,8 @@ actions in one explicitly requested mode: `PREPARE BRANCH`, `DELIVER PR`, or
   after installing GitHub CLI or changing `PATH`.
 - `PREPARE BRANCH` requires a user-marked `Ready` issue, approved Figma context
   when applicable, and a passing Issue Analyst result.
+- `DRAFT PR FOR CI` requires only an Implementer handoff covering the approved
+  scope and a diff limited to that work.
 - `DELIVER PR` requires Implementer, QA `PASS`, and Review handoffs with no
   unresolved blocking findings.
 - `MERGE APPROVED PR` requires a new explicit user merge instruction and all
@@ -417,6 +444,11 @@ actions in one explicitly requested mode: `PREPARE BRANCH`, `DELIVER PR`, or
 
 ```text
 Use the delivery agent in PREPARE BRANCH mode for PROJECT-123.
+```
+
+```text
+Use the delivery agent in DRAFT PR FOR CI mode for PROJECT-123 using the
+Implementer handoff.
 ```
 
 ```text
@@ -437,6 +469,22 @@ pushes to `main`, broad staging pathspecs, pushes to a branch other than the
 current Jira branch, commit pathspecs, local merges, agent approvals, automatic
 merges, administrator bypasses, command chaining, and unrelated shell commands.
 A squash merge always produces a separate interactive user confirmation.
+
+`DRAFT PR FOR CI` exists because the CI workflow triggers only on
+`pull_request` targeting `main` and on `push` to `main`, so a feature-branch
+push produces no CI signal. Checks that cannot run on a developer machine —
+container-backed integration tests, migrations, and browser and accessibility
+tests — otherwise stay unexecuted until after QA and Review have already
+invested effort, and a failure there forces both to repeat. Opening a draft
+pull request moves that evidence earlier.
+
+The draft mode weakens no gate. It requests no reviewer, performs no Jira
+transition, and GitHub refuses to merge a draft. Only `DELIVER PR` promotes the
+draft with `gh pr ready`, and it still requires QA `PASS` and a clean Review.
+A green CI run is never a substitute for either.
+
+The guard rejects newlines in a command, so a pull-request description passed
+on the command line must be a single line.
 The Delivery Agent opens pull requests as `akakiGoginavaAgent` and requests
 `AkakiGoginava` as the human reviewer.
 
