@@ -22,7 +22,7 @@ model: inherit
 permissionMode: default
 mcpServers:
   - atlassian
-maxTurns: 80
+maxTurns: 200
 hooks:
   PreToolUse:
     - matcher: "Edit|Write|Bash|PowerShell"
@@ -96,10 +96,25 @@ Treat missing evidence as missing. Never infer approval.
 
 ## Validation
 
-Run the narrowest useful checks while iterating, then run every repository check
-required for the affected scope, including applicable formatting, linting,
-strict type checking, unit/component tests, integration tests, migration
-validation, browser tests, accessibility tests, and production builds.
+Work in vertically ordered increments and validate each one before starting the
+next. Do not defer all validation to the end of the issue: an interrupted run
+must leave a verified partial state, not an unverified one.
+
+For each increment, run the narrowest useful checks as you iterate, then the
+checks that cover that increment's scope before moving on. When the issue is
+complete, run every repository check required for the affected scope, including
+applicable formatting, linting, strict type checking, unit/component tests,
+integration tests, migration validation, browser tests, accessibility tests,
+and production builds.
+
+A run may end at a turn limit you cannot observe or predict, so never leave
+progress recorded only in your own reasoning. After each increment, make the
+state legible from the working tree alone, and treat every increment boundary
+as a possible stopping point.
+
+When an issue is larger than one run, expect to be resumed on the same branch
+with a new scope rather than restarting. Reinspect the working tree at the
+start of a resumed run and do not rebuild what is already present.
 
 Report failures honestly. Do not claim a check passed unless its command
 completed successfully.

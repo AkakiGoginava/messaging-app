@@ -91,6 +91,78 @@ function Request-MergeApproval {
     exit 0
 }
 
+function Test-PullRequestBodyFile {
+    # A pull-request description cannot be passed inline: this guard rejects
+    # newlines in a command, and the Delivery Agent has no file-writing tool.
+    # `--body-file` is therefore the only way to supply the structured
+    # description `DELIVER PR` requires. Because that content reaches a public
+    # pull request without the guard seeing it on the command line, the file
+    # itself is validated here instead.
+    #
+    # Returns $true when a validated body file was supplied, $false when the
+    # command uses no body file. Blocks rather than returning on any failure.
+    param(
+        [string]$Command,
+        [string]$WorkingDirectory,
+        [string]$IssueKey
+    )
+
+    $bodyFileMatch = [regex]::Match(
+        $Command,
+        '(?i)--body-file[=\s]+(?<q>["'']?)(?<path>[^"''\s]+)\k<q>'
+    )
+    if (-not $bodyFileMatch.Success) {
+        return $false
+    }
+
+    $requestedPath = $bodyFileMatch.Groups["path"].Value
+    $bodyPath = Get-NormalizedPath -Path $requestedPath -BasePath $WorkingDirectory
+
+    if ($bodyPath -match "(?i)(^|[\\/])\.env($|\.)|\.(pem|key|p12|pfx)$") {
+        Block-Action "a sensitive file cannot be used as a pull-request description"
+    }
+
+    if ([System.IO.Path]::GetExtension($bodyPath) -notin @(".md", ".txt")) {
+        Block-Action "the pull-request body file must be a .md or .txt file"
+    }
+
+    if (-not (Test-Path -LiteralPath $bodyPath -PathType Leaf)) {
+        Block-Action "the pull-request body file '$requestedPath' does not exist"
+    }
+
+    if ((Get-Item -LiteralPath $bodyPath).Length -gt 65536) {
+        Block-Action "the pull-request body file exceeds the 64 KB limit"
+    }
+
+    $body = Get-Content -LiteralPath $bodyPath -Raw
+    if ([string]::IsNullOrWhiteSpace($body)) {
+        Block-Action "the pull-request body file is empty"
+    }
+
+    # High-confidence credential shapes only. Broader heuristics would flag
+    # ordinary prose about authentication work and train reviewers to bypass
+    # this check.
+    $secretPatterns = @(
+        "gh[pousr]_[A-Za-z0-9]{16,}",
+        "github_pat_[A-Za-z0-9_]{20,}",
+        "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+        "\bAKIA[0-9A-Z]{16}\b",
+        "\bxox[baprs]-[A-Za-z0-9-]{10,}"
+    )
+    foreach ($secretPattern in $secretPatterns) {
+        if ($body -match $secretPattern) {
+            Block-Action "the pull-request body file contains a credential-shaped string"
+        }
+    }
+
+    $escapedIssueKey = [regex]::Escape($IssueKey)
+    if ($body -notmatch "(?i)Key:\s*$escapedIssueKey\b") {
+        Block-Action "the pull-request body file must include 'Key: $IssueKey'"
+    }
+
+    return $true
+}
+
 $rawInput = [Console]::In.ReadToEnd()
 if ([string]::IsNullOrWhiteSpace($rawInput)) {
     Block-Action "the hook received no tool input"
@@ -294,6 +366,11 @@ if ($command -match $pullRequestWritePattern) {
         )
     }
 
+    $hasValidatedBodyFile = Test-PullRequestBodyFile `
+        -Command $command `
+        -WorkingDirectory $eventWorkingDirectory `
+        -IssueKey $issueKey
+
     if ($command -match "^(?i)gh(?:\.exe)?\s+pr\s+create\b") {
         $escapedIssueKey = [regex]::Escape($issueKey)
         if ($command -notmatch "(?i)--base\s+main\b") {
@@ -302,7 +379,10 @@ if ($command -match $pullRequestWritePattern) {
         if ($command -notmatch "(?i)--title\s+[`"']?$escapedIssueKey(?:\s|:|-)") {
             Block-Action "pull-request title must begin with Jira key $issueKey"
         }
-        if ($command -notmatch "(?i)Key:\s*$escapedIssueKey\b") {
+        if (
+            -not $hasValidatedBodyFile -and
+            $command -notmatch "(?i)Key:\s*$escapedIssueKey\b"
+        ) {
             Block-Action "pull-request description must include 'Key: $issueKey'"
         }
     }

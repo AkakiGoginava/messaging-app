@@ -223,6 +223,22 @@ try {
     $null = New-Item -ItemType Directory -Path (Join-Path $testRoot "src")
     $null = New-Item -ItemType Directory -Path (Join-Path $testRoot "tests")
 
+    # Pull-request body-file fixtures. The credential fixture is assembled at
+    # runtime so no token-shaped literal exists in this file for a secret
+    # scanner to flag.
+    Set-Content -LiteralPath (Join-Path $testRoot "pr-body.md") -Value (
+        "Key: MSG-1`n`nScope, migrations, and rollback notes."
+    )
+    Set-Content -LiteralPath (Join-Path $testRoot "pr-body-no-key.md") -Value (
+        "Scope, migrations, and rollback notes."
+    )
+    Set-Content -LiteralPath (Join-Path $testRoot "pr-body-secret.md") -Value (
+        "Key: MSG-1`n`nToken " + "ghp_" + ("A" * 20)
+    )
+    Set-Content -LiteralPath (Join-Path $testRoot ".env") -Value (
+        "Key: MSG-1`nDATABASE_URL=postgresql://user:pw@host/db"
+    )
+
     $implementerGuard = Join-Path $projectPath ".claude/hooks/implementer-guard.ps1"
     $qaGuard = Join-Path $projectPath ".claude/hooks/qa-guard.ps1"
     $reviewGuard = Join-Path $projectPath ".claude/hooks/review-guard.ps1"
@@ -365,6 +381,69 @@ try {
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{ command = "gh pr merge 999 --squash" }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery allows PR create with a valid body file"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body.md"
+            }
+            Allow = $true
+        },
+        @{
+            Name = "Delivery blocks a body file missing the Jira key"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body-no-key.md"
+            }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery blocks a body file containing a credential"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body-secret.md"
+            }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery blocks a sensitive file as PR body"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .env"
+            }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery blocks a missing body file"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file absent.md"
+            }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery blocks a non-text body file"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file seed.txt.exe"
+            }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery validates a body file on PR edit"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr edit --body-file pr-body-no-key.md"
+            }
             Allow = $false
         },
         @{

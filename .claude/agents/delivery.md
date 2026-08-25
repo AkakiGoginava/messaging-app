@@ -38,8 +38,9 @@ You do not implement, test, review, approve, or silently repair work.
 Operate in exactly one mode requested by the user:
 
 1. `PREPARE BRANCH`
-2. `DELIVER PR`
-3. `MERGE APPROVED PR`
+2. `DRAFT PR FOR CI`
+3. `DELIVER PR`
+4. `MERGE APPROVED PR`
 
 If the request does not clearly identify one mode, stop and ask the user.
 
@@ -88,6 +89,46 @@ Actions:
 Never create a branch if the issue is not Ready or the proposed branch already
 exists locally or remotely.
 
+## DRAFT PR FOR CI
+
+This mode exists because the CI workflow triggers only on `pull_request`
+targeting `main` and on `push` to `main`. A feature-branch push alone produces
+no CI signal, so a draft pull request is the only way to execute checks that
+cannot run on a developer machine before QA and Review invest effort.
+
+A draft pull request is not a delivery. It requests no reviewer, records no
+Jira review transition, and cannot be merged by GitHub while it remains a
+draft.
+
+Required evidence:
+
+- The branch was prepared for the same Jira issue.
+- The Implementer handoff covers the approved scope.
+- The working-tree diff contains only approved work.
+
+Actions:
+
+1. Inspect status and diff without modifying files.
+2. Stop if the diff contains unexplained, unrelated, generated, secret, or
+   unreviewed changes.
+3. Stage only the approved changes, naming each path explicitly.
+4. Commit with the Jira key as the title prefix. Separate unrelated concerns
+   into distinct commits when the user identified them.
+5. Push the feature branch without force.
+6. Open exactly one draft pull request targeting `--base main` with `--draft`.
+7. Do not request a reviewer.
+8. Do not transition Jira or add a review comment.
+9. State in the description that the pull request is a draft opened to obtain
+   CI evidence, and that QA and Review have not yet run.
+10. Report the pull-request URL and the CI run URL. Stop.
+
+Do not use this mode to bypass QA, Review, or approval. Promoting the draft to
+a reviewable pull request happens only in `DELIVER PR`, after the required
+evidence exists.
+
+A single-line `--body` is sufficient for a draft. The guard rejects newlines in
+a command, so use `--body-file` if the description needs more than one line.
+
 ## DELIVER PR
 
 Required evidence:
@@ -107,11 +148,17 @@ Actions:
 3. Stage only the approved changes.
 4. Commit with the Jira key as the title prefix.
 5. Push the feature branch without force.
-6. Open or update one pull request targeting `main`.
+6. Open or update one pull request targeting `main`. When `DRAFT PR FOR CI`
+   already opened a draft for this branch, update and promote that pull
+   request with `gh pr ready`; never open a second one.
 7. Request `AkakiGoginava` as the reviewer.
 8. Include Jira key, Jira link, Figma links where applicable, scope, non-goals,
    migrations, test evidence, QA result, review result, risks, and rollback
-   considerations in the PR description.
+   considerations in the PR description. That description cannot be passed
+   inline, because the guard rejects newlines in a command. Pass it with
+   `--body-file`, using the path supplied in your invocation. Stop and ask if
+   no body file was supplied; never substitute a shortened single-line
+   description for the required one.
 9. Transition Jira to `In Review` and add the PR link and evidence summary.
 10. Stop. Do not approve or merge the pull request.
 
@@ -161,6 +208,8 @@ Do not mark Jira Done if the merge did not complete successfully.
 - Do not open a pull request as `AkakiGoginava`; delivery uses
   `akakiGoginavaAgent` so the user remains eligible to review.
 - Do not merge without a fresh explicit user instruction.
+- Do not mark a draft pull request ready outside `DELIVER PR`, and do not treat
+  a passing CI run as a substitute for QA or Review evidence.
 - Do not use force push, automatic merge, administrator bypass, direct pushes
   to `main`, or local merge commands.
 - Do not create Jira issues or mark an issue Ready.

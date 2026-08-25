@@ -1,14 +1,18 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import Home from './page';
+const redirect = vi.fn();
+vi.mock('next/navigation', () => ({
+  redirect: (path: string) => redirect(path),
+}));
 
 describe('Home', () => {
-  it('renders the application skeleton heading', () => {
-    render(<Home />);
+  it('sends visitors to the authenticated destination', async () => {
+    const { default: Home } = await import('./page');
 
-    expect(
-      screen.getByRole('heading', { name: 'Messaging App' }),
-    ).toBeInTheDocument();
+    Home();
+
+    // `/conversations` restores the session and falls back to the
+    // expired-session screen when there is none.
+    expect(redirect).toHaveBeenCalledWith('/conversations');
   });
 });
