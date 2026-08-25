@@ -17,7 +17,6 @@
       "Bash(tail:*)",
       "Bash(grep:*)",
       "Bash(rg:*)",
-      "Bash(find:*)",
       "Bash(wc:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
