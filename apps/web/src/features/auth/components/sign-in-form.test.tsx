@@ -232,6 +232,32 @@ describe('SignInForm', () => {
     ).toBeEnabled();
   });
 
+  it('replaces the failure banner with the Validation state on the next blocked submit', async () => {
+    const user = userEvent.setup();
+    const { calls } = stubFetch([invalidCredentialsResponse]);
+    renderWithProviders(<SignInForm />);
+
+    await fillForm(user);
+    await submit(user);
+    await screen.findByRole('alert');
+
+    // The failed attempt cleared the password, so submitting again is
+    // stopped in the browser. The previous attempt's banner must not stand
+    // in for it — the approved Validation frames carry no banner.
+    await submit(user);
+
+    expect(
+      await screen.findByText(AuthCopy.validation.summary),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(AuthCopy.failure.signIn)).not.toBeInTheDocument();
+    // Field errors legitimately use `role="alert"`; the banner must not be
+    // among them.
+    expect(
+      screen.queryAllByRole('alert').map((alert) => alert.textContent),
+    ).not.toContain(AuthCopy.failure.signIn);
+    expect(calls).toHaveLength(1);
+  });
+
   it('shows the Loading state while the request is in flight', async () => {
     const user = userEvent.setup();
     let resolveRequest: (() => void) | undefined;

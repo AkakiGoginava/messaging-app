@@ -104,11 +104,11 @@ export class AuthService {
   }
 
   private toRegistrationFailure(error: unknown): ApiException {
-    if (
+    const isUniqueViolation =
       error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === UNIQUE_CONSTRAINT_VIOLATION &&
-      conflictTargets(error).includes('username')
-    ) {
+      error.code === UNIQUE_CONSTRAINT_VIOLATION;
+
+    if (isUniqueViolation && conflictTargets(error).includes('username')) {
       return new ApiException(HttpStatus.CONFLICT, {
         code: ErrorCode.USERNAME_TAKEN,
         // The client renders the reusable Validation state for this case:
@@ -122,10 +122,14 @@ export class AuthService {
     // purpose. The log line distinguishes them for operators; the response
     // does not distinguish them for clients. Nothing from the request body
     // is logged.
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    //
+    // Only a unique-constraint violation is expected here — it is the
+    // duplicate-email case — so only that is left unlogged. Every other
+    // Prisma failure (a `P2024` pool timeout, a `P1017` closed connection)
+    // is an operational problem that must not disappear into a silent 409.
+    if (!isUniqueViolation) {
       this.logger.error(
-        'Unexpected failure while creating an account.',
-        error instanceof Error ? error.stack : undefined,
+        `Unexpected failure while creating an account: ${describeError(error)}`,
       );
     }
 
@@ -134,6 +138,26 @@ export class AuthService {
       message: AuthMessages.REGISTRATION_FAILED,
     });
   }
+}
+
+/**
+ * A deliberately redacted description of a failure: the error's class name,
+ * plus its Prisma code when it has one. Enough for an operator to tell a
+ * pool timeout from a closed connection, and nothing more.
+ *
+ * The message and stack are omitted rather than trimmed. Both are built by
+ * libraries from values this method was called with, and on this code path
+ * those values include the password hash — a stack frame or a driver message
+ * that echoed an argument would put it in the log.
+ */
+function describeError(error: unknown): string {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return `${error.name} (code ${error.code})`;
+  }
+  if (error instanceof Error) {
+    return error.name;
+  }
+  return typeof error;
 }
 
 /** Reads the conflicting column names out of a Prisma P2002 error. */

@@ -56,6 +56,13 @@ export default defineConfig({
    * session, and only the scenarios that must exercise register or sign-in
    * spend a request on them. Adding parallel workers or extra sign-ins can
    * push the suite over the limit and surface as spurious 429s.
+   *
+   * The API can be told to bucket on a forwarded client address instead
+   * (`TRUST_PROXY_HOPS`, see `apps/api/src/common/http/trust-proxy.ts`), but
+   * it is off here and must stay off: there is no trusted edge in this
+   * topology, and enabling it without one removes rate limiting entirely.
+   * So every request in this suite still lands in one shared bucket, and
+   * this constraint must not be relaxed.
    */
   fullyParallel: false,
   workers: 1,

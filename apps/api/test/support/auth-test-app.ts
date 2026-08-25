@@ -4,8 +4,15 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 import type { Response } from 'supertest';
 import type { App } from 'supertest/types';
 
+import { ConfigService } from '@nestjs/config';
+
 import { AppModule } from '../../src/app.module';
 import { SESSION_COOKIE_NAME } from '../../src/auth/session/session.config';
+import {
+  configureTrustedProxy,
+  readTrustedProxyHops,
+  TRUST_PROXY_HOPS_ENV,
+} from '../../src/common/http/trust-proxy';
 
 /**
  * Test-only session signing key. It never protects real data: the container
@@ -20,6 +27,11 @@ export interface BuildAppOptions {
    * its own suite, which builds an app with the real guard.
    */
   disableThrottling?: boolean;
+  /**
+   * Trusted proxy hops for this app. Omitted means the production default —
+   * off — regardless of what the developer happens to have in their shell.
+   */
+  trustProxyHops?: number;
   customize?: (builder: TestingModuleBuilder) => TestingModuleBuilder;
 }
 
@@ -31,6 +43,12 @@ export async function buildAuthTestApp(
   // time, so both must be set before the module graph is instantiated.
   process.env.DATABASE_URL = databaseUrl;
   process.env.SESSION_SECRET = TEST_SESSION_SECRET;
+
+  if (options.trustProxyHops === undefined) {
+    delete process.env[TRUST_PROXY_HOPS_ENV];
+  } else {
+    process.env[TRUST_PROXY_HOPS_ENV] = String(options.trustProxyHops);
+  }
 
   let builder = Test.createTestingModule({ imports: [AppModule] });
 
@@ -47,6 +65,10 @@ export async function buildAuthTestApp(
   const app: INestApplication<App> = (
     await builder.compile()
   ).createNestApplication();
+  // The same forwarded-address trust `main.ts` applies, read from the same
+  // setting, so these suites exercise the deployed request path rather than
+  // a bare Nest server.
+  configureTrustedProxy(app, readTrustedProxyHops(app.get(ConfigService)));
   await app.init();
   return app;
 }

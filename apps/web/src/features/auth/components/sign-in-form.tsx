@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, type FormEvent } from 'react';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -68,11 +68,17 @@ export function SignInForm() {
   }
 
   const isPending = mutation.isPending;
+  const hasFieldErrors = Object.keys(errors).length > 0;
+
   // Any rejected credential produces one neutral banner. The UI never
   // distinguishes an unknown account from a wrong password.
-  const showFailure = mutation.error !== null;
+  //
+  // A failure from the previous attempt must not stand in for this one: the
+  // approved Validation frames carry no failure banner, so a submit stopped
+  // by client-side validation has to show the Validation subtitle instead.
+  const showFailure = mutation.error !== null && !hasFieldErrors;
 
-  const onSubmit = handleSubmit(async (values) => {
+  const submit = handleSubmit(async (values) => {
     try {
       await mutation.mutateAsync(values);
     } catch {
@@ -82,10 +88,16 @@ export function SignInForm() {
     }
   });
 
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    // Clear the previous attempt's failure before the new one is validated,
+    // so a stale banner cannot survive into a submit that never reaches the
+    // server.
+    mutation.reset();
+    void submit(event);
+  };
+
   const { ref: identifierRef, ...identifierField } = register('identifier');
   const { ref: passwordRef, ...passwordField } = register('password');
-
-  const hasFieldErrors = Object.keys(errors).length > 0;
 
   return (
     <AuthLayout>
@@ -106,7 +118,7 @@ export function SignInForm() {
         <form
           noValidate
           aria-busy={isPending}
-          onSubmit={(event) => void onSubmit(event)}
+          onSubmit={onSubmit}
           className="mt-5 flex flex-col gap-5"
         >
           <FormField

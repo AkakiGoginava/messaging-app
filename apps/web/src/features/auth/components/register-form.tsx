@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, type FormEvent } from 'react';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -17,12 +17,19 @@ import { FormField } from '@/components/auth/form-field';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 
-import { AuthErrorCode } from '../api';
+import { ApiError } from '../api';
 import { AuthCopy, withUsername } from '../messages';
 import { REDIRECT_DELAY_MS, useRegisterMutation } from '../queries';
 import { registerSchema, type RegisterInput } from '../schemas';
 
 const copy = AuthCopy.register;
+
+/**
+ * Fields the server may attach an error to. Anything outside this list is
+ * not a field this form renders, so it falls through to the generic banner
+ * rather than being silently dropped.
+ */
+const SERVER_ERROR_FIELDS = ['username', 'email', 'password'] as const;
 
 export function RegisterForm() {
   const router = useRouter();
@@ -73,26 +80,36 @@ export function RegisterForm() {
   }
 
   const isPending = mutation.isPending;
-  const failure = mutation.error;
+  const hasFieldErrors = Object.keys(errors).length > 0;
 
-  // A username conflict is reported on the field, reusing the Validation
-  // state. Every other failure — including a duplicate email — shows only
-  // the generic banner, so the response never confirms that an email
-  // address is registered.
-  const showGenericFailure =
-    failure !== null && failure.code !== AuthErrorCode.USERNAME_TAKEN;
+  // A failure the server pinned to a field is rendered on that field,
+  // reusing the Validation state. Every failure it did not — including a
+  // duplicate email — shows only the generic banner, so the response never
+  // confirms that an email address is registered.
+  //
+  // Gating on the rendered field errors rather than on the error code also
+  // keeps a failure from the *previous* attempt out of the way: a submit
+  // stopped by client-side validation must show the approved Validation
+  // subtitle, and the approved Validation frames carry no failure banner.
+  const showGenericFailure = mutation.error !== null && !hasFieldErrors;
 
-  const onSubmit = handleSubmit(async (values) => {
+  const submit = handleSubmit(async (values) => {
     try {
       await mutation.mutateAsync(values);
     } catch (error) {
       const fieldErrors =
-        error instanceof Error && 'fieldErrors' in error
-          ? (error as { fieldErrors?: Record<string, string> }).fieldErrors
-          : undefined;
+        error instanceof ApiError ? error.fieldErrors : undefined;
 
-      if (fieldErrors?.username) {
-        setError('username', { message: fieldErrors.username });
+      const reported = SERVER_ERROR_FIELDS.filter(
+        (field) => typeof fieldErrors?.[field] === 'string',
+      );
+
+      if (reported.length > 0) {
+        for (const field of reported) {
+          setError(field, { message: fieldErrors?.[field] });
+        }
+        // What the user typed is left alone: the credential itself was not
+        // rejected, only a specific field was, and the message points at it.
         return;
       }
 
@@ -102,11 +119,17 @@ export function RegisterForm() {
     }
   });
 
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    // Clear the previous attempt's failure before the new one is validated,
+    // so a stale banner cannot survive into a submit that never reaches the
+    // server.
+    mutation.reset();
+    void submit(event);
+  };
+
   const { ref: usernameRef, ...usernameField } = register('username');
   const { ref: emailRef, ...emailField } = register('email');
   const { ref: passwordRef, ...passwordField } = register('password');
-
-  const hasFieldErrors = Object.keys(errors).length > 0;
 
   return (
     <AuthLayout>
@@ -127,7 +150,7 @@ export function RegisterForm() {
         <form
           noValidate
           aria-busy={isPending}
-          onSubmit={(event) => void onSubmit(event)}
+          onSubmit={onSubmit}
           className="mt-5 flex flex-col gap-5"
         >
           <FormField

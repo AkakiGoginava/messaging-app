@@ -219,6 +219,113 @@ describe('RegisterForm', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows a server-reported email error on the email field', async () => {
+    const user = userEvent.setup();
+    // Reachable when the client and server validators disagree about an
+    // address: the server answers 400 with the field named.
+    stubFetch([
+      {
+        status: 400,
+        body: {
+          code: 'VALIDATION_FAILED',
+          message: AuthCopy.validation.summary,
+          fieldErrors: { email: AuthCopy.validation.email },
+        },
+      },
+    ]);
+    renderWithProviders(<RegisterForm />);
+
+    await fillValidForm(user);
+    await user.click(
+      screen.getByRole('button', { name: AuthCopy.register.submit }),
+    );
+
+    const email = await screen.findByLabelText('Email');
+    await waitFor(() => expect(email).toHaveAttribute('aria-invalid', 'true'));
+    expect(email).toHaveAccessibleDescription(AuthCopy.validation.email);
+    // The field carries the message, so the generic banner stays away.
+    expect(
+      screen.queryByText(AuthCopy.failure.register),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows a server-reported password error on the password field', async () => {
+    const user = userEvent.setup();
+    stubFetch([
+      {
+        status: 400,
+        body: {
+          code: 'VALIDATION_FAILED',
+          message: AuthCopy.validation.summary,
+          fieldErrors: { password: AuthCopy.validation.password },
+        },
+      },
+    ]);
+    renderWithProviders(<RegisterForm />);
+
+    await fillValidForm(user);
+    await user.click(
+      screen.getByRole('button', { name: AuthCopy.register.submit }),
+    );
+
+    const password = await screen.findByLabelText('Password');
+    await waitFor(() =>
+      expect(password).toHaveAttribute('aria-invalid', 'true'),
+    );
+    // The field keeps its help text, so the error is appended to the
+    // description rather than replacing it.
+    expect(password).toHaveAccessibleDescription(
+      new RegExp(
+        AuthCopy.validation.password.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+      ),
+    );
+    expect(
+      screen.queryByText(AuthCopy.failure.register),
+    ).not.toBeInTheDocument();
+  });
+
+  it('replaces the failure banner with the Validation state on the next blocked submit', async () => {
+    const user = userEvent.setup();
+    const { calls } = stubFetch([
+      {
+        status: 409,
+        body: {
+          code: 'REGISTRATION_FAILED',
+          message: AuthCopy.failure.register,
+        },
+      },
+    ]);
+    renderWithProviders(<RegisterForm />);
+
+    await fillValidForm(user);
+    await user.click(
+      screen.getByRole('button', { name: AuthCopy.register.submit }),
+    );
+    await screen.findByText(AuthCopy.failure.register);
+
+    // Break a field, then submit again. The request never leaves the
+    // browser, so the previous attempt's banner must not stand in for it —
+    // the approved Validation frames carry no banner.
+    await user.clear(screen.getByLabelText('Username'));
+    await user.type(screen.getByLabelText('Username'), 'jo');
+    await user.click(
+      screen.getByRole('button', { name: AuthCopy.register.submit }),
+    );
+
+    expect(
+      await screen.findByText(AuthCopy.validation.summary),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(AuthCopy.failure.register),
+    ).not.toBeInTheDocument();
+    // Field errors legitimately use `role="alert"`; the banner must not be
+    // among them.
+    expect(
+      screen.queryAllByRole('alert').map((alert) => alert.textContent),
+    ).not.toContain(AuthCopy.failure.register);
+    expect(calls).toHaveLength(1);
+  });
+
   it('keeps the non-password fields but clears the password after a failure', async () => {
     const user = userEvent.setup();
     stubFetch([
