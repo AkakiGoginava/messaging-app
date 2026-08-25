@@ -38,6 +38,28 @@ function readColorTokens(): Record<string, string> {
   return tokens;
 }
 
+/**
+ * Every `--color-*` declaration in the stylesheet, whatever syntax its value
+ * uses, as `[name, rawValue]`.
+ *
+ * `readColorTokens` deliberately only understands opaque six-digit hex,
+ * because that is the only form the contrast maths below can evaluate. That
+ * makes it blind to a token written any other way — `#abc`, `#rrggbbaa`,
+ * `rgb()`, `hsl()`, `var()`, a named colour, or `oklch()`, which is the form
+ * Tailwind v4's own palette ships in. A token in one of those forms would be
+ * absent from `readColorTokens`, and therefore absent from the "uncovered"
+ * list, so it would slip past the coverage check in silence.
+ *
+ * This parser closes that hole by reading declarations rather than values.
+ */
+function readDeclaredColorTokens(): Array<[name: string, rawValue: string]> {
+  const css = readFileSync(cssPath, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+
+  return [...css.matchAll(/--color-([A-Za-z0-9_-]+)\s*:\s*([^;]+);/g)].map(
+    ([, name, value]) => [name, value.trim()],
+  );
+}
+
 /** WCAG 2.1 relative luminance of an opaque `#rrggbb` colour. */
 function relativeLuminance(hex: string): number {
   const int = Number.parseInt(hex.slice(1), 16);
@@ -159,6 +181,20 @@ describe('design tokens', () => {
 
   it.each(RETIRED_TEXT_TOKENS)('does not reintroduce --color-%s', (name) => {
     expect(tokens).not.toHaveProperty(name);
+  });
+
+  it('declares every colour token in a form the contrast check can read', () => {
+    const unreadable = readDeclaredColorTokens()
+      .filter(([name]) => !(name in tokens))
+      .map(([name, value]) => `--color-${name}: ${value}`);
+
+    expect(
+      unreadable,
+      'these tokens are not opaque six-digit hex, so the contrast check ' +
+        'cannot evaluate them and would skip them without failing. Express ' +
+        'them as #rrggbb, or teach readColorTokens the new syntax before ' +
+        'using it',
+    ).toEqual([]);
   });
 
   it('checks every declared colour token', () => {
