@@ -1,7 +1,7 @@
 # Stage 1 - Messaging MVP and Human-Gated Agent Workflow
 
-**Version:** 1.4  
-**Date:** 2026-08-03  
+**Version:** 1.5  
+**Date:** 2026-08-26  
 **Status:** Project foundation  
 **Source:** User-approved direction transferred from the prior project chat
 
@@ -9,6 +9,7 @@
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
+| 1.5 | 2026-08-26 | Project foundation | Replaced the one-story-per-vertical-slice unit of delivery with Story plus functionality-scoped Subtask decomposition, moved the branch, pull-request, and merge boundary to the subtask, and added task sizing rules and a story closeout pass; introduced two scope-separated standing epics for non-slice work, handled outside the subagent loop; removed the version from the plan filename. |
 | 1.4 | 2026-08-03 | Project foundation | Password policy changed to a 12-128 character minimum with at least one uppercase letter and one digit, replacing the plain 15-128 character length rule. |
 | 1.3 | 2026-07-30 | Project foundation | Removed generated PDF distribution and renderer requirements; Markdown is now the sole maintained plan artifact. |
 | 1.2 | 2026-07-30 | Project foundation | Defined the exact setup-phase Figma file, page, draft-section, access, and evidence-link requirements. |
@@ -164,7 +165,8 @@ and
 1. Create the GitHub repository and enable protected-branch rules.
 2. Create a Jira project with `Backlog`, `Ready`, `In Progress`, `In Review`,
    and `Done`.
-3. Create the Stage 1 Jira epic.
+3. Create the Stage 1 Jira epic, and the two standing epics described in
+   `Standing epics and non-slice work`.
 4. Prepare the setup-phase Figma structure:
    - Create one Figma Design file named `Messaging App`.
    - Ensure the user owns or administers the file and the identity authenticated
@@ -190,16 +192,133 @@ and
    `Agent(<name>)` tool invocation, and prohibit delegation between roles.
 7. Establish the monorepo, Docker Compose environment, CI checks, issue
    template, and PR template through an initial enablement ticket.
-8. Create one independently mergeable Jira story per vertical slice:
+8. Create one Jira story per vertical slice under the Stage 1 epic, then split
+   each story into functionality-scoped subtasks as described in `Story and
+   task decomposition`. The story is the umbrella record; the subtask is the
+   unit of branch, pull request, and merge. The Stage 1 stories are:
    - Registration, sign-in, session, and logout.
    - User discovery and direct-conversation creation.
    - Conversation list and persisted message history.
    - Sending messages and idempotent persistence.
    - Realtime delivery, reconnection, and logout invalidation.
    - Responsive states, accessibility, and final security hardening.
+   Create the subtasks for one story at a time, immediately before that story
+   starts, so each breakdown reflects the current merged state of `main`.
 9. Complete `docs/setup/Stage-1-Setup-Evidence.md` for the setup artifacts that
    exist at this phase. Mark later design, story, product, and CI evidence
    `Not applicable yet` rather than treating it as a setup blocker.
+
+### Story and task decomposition
+
+A story states user value and the complete acceptance criteria for one vertical
+slice. It never carries a branch, a pull request, or code of its own.
+
+A subtask delivers one functionality-scoped increment of its parent story and
+carries exactly one branch, one pull request, and one merge.
+
+Split along capability, not along architectural layer. A subtask should be a
+thin vertical strip that is observable on its own. Split a single capability
+into separate server and interface subtasks only when that capability alone
+exceeds the limits below.
+
+Every subtask must satisfy all of the following:
+
+- It delivers one capability, expressible as a coherent group of the parent
+  story's acceptance criteria.
+- It is independently mergeable: `main` stays green, migrations apply cleanly
+  to a clean database, and no production code is left unreachable except the
+  behaviour the subtask itself introduces.
+- It fits one Implementer run without resumption, and targets at most roughly
+  400 changed lines of production code, excluding generated files, lockfiles,
+  and snapshots.
+- It carries its own testable acceptance criteria and required tests.
+
+Sizing signals:
+
+- Expect two to five subtasks per story. More than six means the story is
+  really two stories.
+- If an Implementer needs a second run for any reason other than QA or review
+  findings, the subtask was too large. Land what is complete and move the
+  remainder into a new subtask instead of extending the current one.
+- Only the user creates subtasks, and only the user marks each one `Ready`.
+
+### Standing epics and non-slice work
+
+Not all work is a product vertical slice. Agent-workflow hardening, repository
+and CI tooling, and governance changes have no user-facing acceptance criteria
+and no Figma context, and their items are mutually independent rather than
+increments of one capability.
+
+Such work lives under a standing epic that stays open for the life of the
+project and receives items as they are found. Stage 1 has two, and each item
+belongs to exactly one:
+
+- `Agent workflow hardening` holds work that **governs how the agents work**:
+  role definitions, the handoff contract, guard hooks, agent permissions, and
+  the delivery workflow itself.
+- `Repository and CI tooling` holds work that affects **any contributor**,
+  human or agent: Git and line-ending configuration, package scripts, CI
+  workflow behaviour, and build or test plumbing.
+
+A standing epic differs from a story in three ways:
+
+- Its children are Tasks at story level, not subtasks. Each is independently
+  marked `Ready` and carries its own branch, pull request, and merge.
+- The story layer and `Story closeout` do not apply. Unrelated tooling fixes
+  share no acceptance criteria, so an end-to-end closeout pass would verify
+  nothing.
+- It is never completed. Stage 1 completion does not require it to be empty.
+
+Each item still obeys the sizing rules in `Story and task decomposition`.
+
+Admission criteria. An item belongs in a standing epic only when all of the
+following hold:
+
+- It matches the positive scope of exactly one standing epic above. Do not
+  admit an item merely because it is not product code: that test admits
+  everything and is how a focused epic becomes a dumping ground.
+- For `Agent workflow hardening` specifically, the test is whether the fix
+  *governs* the agents, not whether it *affects* them. A CI script that can
+  report green on a broken branch affects every agent run, but it is a CI
+  concern, not an agent control.
+- It is not a Stage 1 product behaviour, and not maintenance of a product
+  artifact such as a design file. Both stay under the Stage 1 epic.
+- It is independently mergeable and does not depend on an unmerged product
+  story.
+- It is recorded with the evidence that produced it: the commit observed, the
+  file and line, and the role that found it.
+
+Execution model. Standing-epic items are handled directly by the user and the
+orchestrating Claude Code session. They do not run the Implementer, QA, Review,
+or Delivery agents, and the `Repeat for every Ready subtask` loop does not
+apply to them.
+
+The gates that remain are the ones that do not depend on a subagent:
+
+- Protected `main`, required CI checks, and no bypass.
+- One pull request per item, reviewed and approved by the user.
+- The user authorizes every merge.
+- Jira transitions and evidence recorded on the item.
+
+This is a deliberate trade. These items are small, meta, and mostly touch
+repository governance and tooling rather than product behaviour, so the agent
+loop costs more than it returns. The cost is that no independent role reads the
+change before the user does, and two items already in this epic exist precisely
+because coordinator-authored controls looked correct until an independent role
+read them. The user may still ask for a Review pass on any individual item;
+nothing here forbids it.
+
+Scheduling and blocking:
+
+- Work standing-epic items between stories rather than inside one, so a
+  product story is not interrupted by unrelated tooling changes.
+- An item that blocks a product story is marked as blocking that story and must
+  merge before the story's first subtask starts.
+
+Deferring an item into a standing epic is the user's decision, not an agent's.
+An agent that finds qualifying work reports it with its evidence and stops. It
+does not silently defer the item, and it does not silently fix it inside an
+unrelated issue.
 
 ### Design and task preparation
 
@@ -209,45 +328,82 @@ and
 3. Personally review and approve or revise the designs.
 4. Ask the Issue Analyst Agent to draft each Jira story with user value, scope,
    non-goals, acceptance criteria, Figma links, API/data impact, dependencies,
-   and test expectations.
-5. Personally edit and create the Jira items. Only the user may mark a task
-   `Ready`.
+   and test expectations, together with a proposed subtask breakdown that
+   satisfies `Story and task decomposition`. The breakdown must map every
+   acceptance criterion to exactly one subtask and state the intended order.
+5. Personally edit and create the story and its subtasks. Only the user may
+   mark an issue `Ready`.
 
-### Repeat for every Jira story
+### Per story, before its first subtask
 
-1. Select one `Ready` issue and manually invoke the Issue Analyst Agent with its
-   key.
-2. The agent confirms the issue has approved Figma context, testable acceptance
-   criteria, bounded scope, dependencies, and one-PR feasibility. It comments
-   only after user confirmation and stops if anything is missing. It does not
-   transition the issue.
-3. Invoke the Delivery Agent to create `type/JIRA-KEY-short-description`, link
-   the branch, and transition Jira to `In Progress`.
-4. Invoke the Implementer Agent. It reads Jira and Figma, implements only the
-   stated vertical slice, adds migrations and tests, and records decisions in
-   the PR-ready summary.
-5. Invoke the QA Agent. It runs the complete affected test set and verifies the
-   acceptance criteria. Test failures return to the Implementer; repeat until
-   clean.
-6. Invoke the Review Agent. It performs an independent read-only review,
+1. Confirm the story has approved Figma frames covering its screens and states.
+2. Review the proposed subtask breakdown against current `main`, create the
+   subtasks, and mark only the first one `Ready`.
+3. Record the parent story key on every subtask so downstream handoffs can cite
+   the story instead of restating it.
+
+### Repeat for every Ready subtask
+
+This loop covers subtasks under a product story. Standing-epic Tasks are
+handled directly by the user and the orchestrator instead; see `Standing epics
+and non-slice work`.
+
+1. Select one `Ready` subtask and manually invoke the Issue Analyst Agent with
+   its key. It verifies readiness against the parent story rather than
+   re-deriving story-level context, confirming that the subtask has testable
+   acceptance criteria, bounded scope, satisfied dependencies on earlier
+   subtasks, and one-PR feasibility. It comments only after user confirmation,
+   stops if anything is missing, and does not transition the issue.
+2. Invoke the Delivery Agent to create `type/JIRA-KEY-short-description` from
+   current `main` using the subtask key, link the branch, and transition the
+   subtask to `In Progress`. Transition the parent story to `In Progress` on
+   its first subtask only.
+3. Invoke the Implementer Agent. It reads the subtask, its parent story, and
+   Figma, implements only the subtask's scope, adds migrations and tests, and
+   records decisions in the PR-ready summary.
+4. Invoke the QA Agent. It runs the complete affected test set and verifies the
+   subtask's acceptance criteria. Test failures return to the Implementer;
+   repeat until clean.
+5. Invoke the Review Agent. It performs an independent read-only review,
    emphasizing authorization, session handling, WebSocket membership, data
-   isolation, error states, and scope creep.
-7. Resolve blocking findings through another Implementer -> QA -> Review loop.
-8. Invoke the Delivery Agent to push the branch, open a PR, link Jira and Figma,
-   summarize the change and evidence, and transition Jira to `In Review`.
-9. GitHub Actions runs all required gates. The agent may diagnose failures, but
+   isolation, error states, and scope beyond the subtask.
+6. Resolve blocking findings through another Implementer -> QA -> Review loop.
+7. Invoke the Delivery Agent to push the branch, open a PR, link the subtask,
+   its parent story, and Figma, summarize the change and evidence, and
+   transition the subtask to `In Review`.
+8. GitHub Actions runs all required gates. The agent may diagnose failures, but
    code corrections return to the Implementer.
-10. Personally inspect code quality and either request changes or approve the
-    PR.
-11. For requested changes, repeat the Implementer -> QA -> Review -> Delivery
+9. Personally inspect code quality and either request changes or approve the
+   PR.
+10. For requested changes, repeat the Implementer -> QA -> Review -> Delivery
     cycle.
-12. After approval, explicitly instruct the Delivery Agent to merge.
-13. The Delivery Agent rechecks approval, required CI, unresolved discussions,
+11. After approval, explicitly instruct the Delivery Agent to merge.
+12. The Delivery Agent rechecks approval, required CI, unresolved discussions,
     and current branch state; squash-merges without bypassing protection.
-14. The Delivery Agent updates Jira to `Done` and adds the PR, merge commit,
-    test summary, and any follow-up items.
-15. Handle follow-up work through new user-created Jira items rather than
-    silently expanding the completed story.
+13. The Delivery Agent transitions the subtask to `Done` and adds the PR, merge
+    commit, and test summary. The parent story stays open.
+14. Mark the next subtask `Ready` and repeat. When a merged subtask changed a
+    shared interface, revalidate the remaining subtasks' scope against the new
+    `main` before starting them.
+
+### Story closeout
+
+1. After the last subtask merges, invoke the Delivery Agent to create
+   `chore/STORY-KEY-story-closeout` from current `main`. QA never validates on
+   `main` directly, because the QA guard blocks work on a protected branch.
+2. Invoke the QA Agent on that branch to verify the parent story's complete
+   acceptance criteria end to end, including the interactions between subtasks
+   that no single subtask covered.
+3. Gaps in behaviour become new subtasks under the same story, never
+   amendments to merged work. Missing story-level test coverage that QA adds on
+   the closeout branch ships as its own reviewed pull request.
+4. On a clean story acceptance pass with no test additions, delete the closeout
+   branch unmerged.
+5. Instruct the Delivery Agent to transition the story to `Done` with links to
+   every merged PR and the closeout evidence. The story itself closes without a
+   feature pull request.
+6. Handle follow-up work through new user-created Jira items rather than
+   silently expanding a completed story.
 
 ## 5. Test Plan, Acceptance, and Plan Maintenance
 
@@ -280,24 +436,31 @@ traces, and cross-browser support as documented in its
 ### Stage 1 completion criteria
 
 - All listed MVP behaviors are merged through protected PRs.
-- Every Jira story links to one merged PR and approved Figma frames.
+- Every Jira story links to approved Figma frames, and every subtask under it
+  links to exactly one merged PR.
 - No critical/high security findings or unresolved blocking review comments
   remain.
 - Two users can complete the full direct-message flow on desktop and mobile
   browser widths.
 - Deferred features remain absent from the implementation and backlog unless
   the user creates new work.
+- Open items in a standing epic do not block Stage 1 completion, except any
+  item marked as blocking a product story.
 
 ### Updateable plan artifact
 
 Maintain one authoritative deliverable:
 
-- `docs/plans/Stage-1-Messaging-App-Plan-v1.3.md` as the editable and
+- `docs/plans/Stage-1-Messaging-App-Plan.md` as the editable and
   distributable source.
 
-Future refinements update the Markdown source, append the revision history,
-increment the version, update repository references, and validate its structure
-and links. Generated PDF copies are not required or maintained.
+The filename carries no version. The current version lives in the document
+header and the revision history, so a version bump never renames the file or
+invalidates a reference to it. Do not reintroduce a versioned filename.
+
+Future refinements update the Markdown source, append a revision-history row,
+increment the version in the header, and validate the document structure and
+links. Generated PDF copies are not required or maintained.
 
 ### Assumptions
 
@@ -323,6 +486,8 @@ and links. Generated PDF copies are not required or maintained.
 | Message write path | REST only; Socket.IO broadcasts committed results |
 | Conversation uniqueness | Canonical participant-pair key with a database uniqueness constraint |
 | Delivery control | Human-reviewed, protected, squash-merged pull requests |
+| Work decomposition | Story per vertical slice; functionality-scoped subtask is the unit of branch, PR, and merge |
+| Non-slice work | Two standing epics — `Agent workflow hardening` (governs the agents) and `Repository and CI tooling` (affects any contributor) — holding independent story-level Tasks; never completed and do not gate Stage 1 |
 | Agent orchestration | Manual invocation only; `Agent(<name>)` requires user confirmation and `claude --agent <name>` is user-started; no unattended coordinator |
 | Deployment | Deferred beyond Stage 1 |
 

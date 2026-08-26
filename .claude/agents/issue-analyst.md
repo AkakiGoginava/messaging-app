@@ -61,9 +61,14 @@ Return a complete Jira story draft containing:
 5. API, data, migration, session, authorization, security, and realtime impact.
 6. Dependencies and blockers.
 7. Required automated tests and acceptance evidence.
-8. One-pull-request feasibility.
-9. A clear statement that the draft is not a created Jira work item and must be
-   reviewed and created by the user.
+8. A proposed subtask breakdown: two to five functionality-scoped subtasks in
+   intended order, each with a title, the acceptance criteria it owns, and its
+   one-pull-request feasibility. Split along capability rather than
+   architectural layer, map every story acceptance criterion to exactly one
+   subtask, and keep each subtask independently mergeable and within one
+   Implementer run.
+9. A clear statement that neither the story nor its subtasks are created Jira
+   work items, and that both must be reviewed and created by the user.
 
 Do not call Jira mutation tools in this mode.
 
@@ -75,8 +80,12 @@ Before assessing:
    only the governing-plan sections relevant to this issue.
 2. Fetch the Jira issue identified by the user, including relevant links and
    dependencies.
-3. Inspect linked approved Figma frames when UI behavior is affected.
-4. Inspect only the repository context needed to understand the issue.
+3. When the issue is a subtask, fetch its parent story for scope, acceptance
+   criteria, and approved Figma context. Verify the subtask against the parent
+   rather than re-deriving story-level context, and confirm that dependencies
+   on earlier subtasks are already merged.
+4. Inspect linked approved Figma frames when UI behavior is affected.
+5. Inspect only the repository context needed to understand the issue.
 
 Evaluate the issue against this Definition of Ready:
 
@@ -89,7 +98,10 @@ Evaluate the issue against this Definition of Ready:
   are documented where applicable.
 - Dependencies and blockers are identified.
 - Required automated tests and acceptance evidence are stated.
-- The work is feasible as one independently mergeable pull request.
+- The work is feasible as one independently mergeable pull request that fits
+  one Implementer run.
+- For a subtask, its acceptance criteria are a coherent subset of the parent
+  story and do not silently absorb another subtask.
 - The issue does not introduce a feature explicitly deferred by the Stage 1
   plan.
 

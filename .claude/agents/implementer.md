@@ -76,7 +76,11 @@ Treat missing evidence as missing. Never infer approval.
 
 ## Implementation rules
 
-- Implement only the approved vertical slice.
+- Implement only the scope of the assigned issue. When it is a subtask, use the
+  parent story for context only; work belonging to a sibling subtask is out of
+  scope.
+- Stop and report instead of expanding scope if the issue cannot be completed
+  in one run. Do not carry a partially built sibling capability along.
 - Follow established repository architecture, naming, and coding patterns.
 - Keep changes minimal and independently reviewable.
 - Add or update tests for every behavior changed.

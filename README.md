@@ -2,7 +2,7 @@
 
 This project is governed by the Stage 1 plan:
 
-- [Project plan](docs/plans/Stage-1-Messaging-App-Plan-v1.4.md)
+- [Project plan](docs/plans/Stage-1-Messaging-App-Plan.md)
 
 Stage 1 is a responsive one-to-one messaging MVP with a human-gated agent
 workflow. Production deployment and all explicitly deferred features remain
@@ -265,9 +265,11 @@ Definition of Ready using read-only repository and Figma access.
 
 - Authenticate the project-scoped Atlassian Rovo and Figma MCP connections from
   `.mcp.json`.
-- For `DRAFT STORY`, provide one bounded Stage 1 slice and approved Figma links
-  when UI behavior is affected.
-- For `ASSESS READY ISSUE`, provide one existing Jira issue key.
+- For `DRAFT STORY`, provide one bounded Stage 1 vertical slice and approved
+  Figma links when UI behavior is affected. The draft returns the story plus a
+  proposed functionality-scoped subtask breakdown.
+- For `ASSESS READY ISSUE`, provide one existing Jira issue key. This is
+  normally a subtask key; the agent reads its parent story for context.
 
 ### Invocation
 
@@ -299,7 +301,7 @@ implementation note, and the posted or proposed Jira comment.
 
 The Implementer is defined in `.claude/agents/implementer.md`. It reads the Jira
 issue and approved Figma frames, then implements exactly one approved Stage 1
-vertical slice with required production code, migrations, and tests.
+subtask with required production code, migrations, and tests.
 
 ### Prerequisites
 
@@ -328,12 +330,14 @@ before starting the next, rather than deferring all validation to the end, so
 an interrupted run leaves a verified partial state.
 
 A run can end at a turn limit the agent cannot observe, so do not rely on it to
-stop and summarize on its own. Scope each invocation to a specific increment
-and keep the remaining increment list outside the agent. A slice larger than
-one run is resumed on the same branch with a new scope, never restarted: state
-what is already on disk so the resumed run does not rebuild it, and name the
-files it must not touch. After a truncated run, read the working tree to
-establish real progress rather than trusting the agent's last message.
+stop and summarize on its own. Subtask sizing exists to keep one invocation
+within one run; if a subtask still overruns, treat that as a decomposition
+defect and move the remainder into a new subtask rather than resuming
+indefinitely. When a resume is unavoidable, continue on the same branch with a
+new scope, never restart: state what is already on disk so the resumed run does
+not rebuild it, and name the files it must not touch. After a truncated run,
+read the working tree to establish real progress rather than trusting the
+agent's last message.
 
 The Implementer leaves an uncommitted working tree for the QA Agent.
 
