@@ -9,7 +9,7 @@
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
-| 1.5 | 2026-08-26 | Project foundation | Replaced the one-story-per-vertical-slice unit of delivery with Story plus functionality-scoped Subtask decomposition, moved the branch, pull-request, and merge boundary to the subtask, and added task sizing rules and a story closeout pass; introduced standing epics for non-slice agent-workflow and tooling work handled outside the subagent loop; removed the version from the plan filename. |
+| 1.5 | 2026-08-26 | Project foundation | Replaced the one-story-per-vertical-slice unit of delivery with Story plus functionality-scoped Subtask decomposition, moved the branch, pull-request, and merge boundary to the subtask, and added task sizing rules and a story closeout pass; introduced two scope-separated standing epics for non-slice work, handled outside the subagent loop; removed the version from the plan filename. |
 | 1.4 | 2026-08-03 | Project foundation | Password policy changed to a 12-128 character minimum with at least one uppercase letter and one digit, replacing the plain 15-128 character length rule. |
 | 1.3 | 2026-07-30 | Project foundation | Removed generated PDF distribution and renderer requirements; Markdown is now the sole maintained plan artifact. |
 | 1.2 | 2026-07-30 | Project foundation | Defined the exact setup-phase Figma file, page, draft-section, access, and evidence-link requirements. |
@@ -165,8 +165,8 @@ and
 1. Create the GitHub repository and enable protected-branch rules.
 2. Create a Jira project with `Backlog`, `Ready`, `In Progress`, `In Review`,
    and `Done`.
-3. Create the Stage 1 Jira epic, and the `Agent workflow hardening` standing
-   epic described in `Standing epics and non-slice work`.
+3. Create the Stage 1 Jira epic, and the two standing epics described in
+   `Standing epics and non-slice work`.
 4. Prepare the setup-phase Figma structure:
    - Create one Figma Design file named `Messaging App`.
    - Ensure the user owns or administers the file and the identity authenticated
@@ -250,8 +250,15 @@ and no Figma context, and their items are mutually independent rather than
 increments of one capability.
 
 Such work lives under a standing epic that stays open for the life of the
-project and receives items as they are found. Stage 1 has one:
-`Agent workflow hardening`.
+project and receives items as they are found. Stage 1 has two, and each item
+belongs to exactly one:
+
+- `Agent workflow hardening` holds work that **governs how the agents work**:
+  role definitions, the handoff contract, guard hooks, agent permissions, and
+  the delivery workflow itself.
+- `Repository and CI tooling` holds work that affects **any contributor**,
+  human or agent: Git and line-ending configuration, package scripts, CI
+  workflow behaviour, and build or test plumbing.
 
 A standing epic differs from a story in three ways:
 
@@ -267,8 +274,15 @@ Each item still obeys the sizing rules in `Story and task decomposition`.
 Admission criteria. An item belongs in a standing epic only when all of the
 following hold:
 
-- It is not a Stage 1 product behaviour. Product defects and deferred product
-  hardening stay in the product backlog under the Stage 1 epic.
+- It matches the positive scope of exactly one standing epic above. Do not
+  admit an item merely because it is not product code: that test admits
+  everything and is how a focused epic becomes a dumping ground.
+- For `Agent workflow hardening` specifically, the test is whether the fix
+  *governs* the agents, not whether it *affects* them. A CI script that can
+  report green on a broken branch affects every agent run, but it is a CI
+  concern, not an agent control.
+- It is not a Stage 1 product behaviour, and not maintenance of a product
+  artifact such as a design file. Both stay under the Stage 1 epic.
 - It is independently mergeable and does not depend on an unmerged product
   story.
 - It is recorded with the evidence that produced it: the commit observed, the
@@ -473,7 +487,7 @@ links. Generated PDF copies are not required or maintained.
 | Conversation uniqueness | Canonical participant-pair key with a database uniqueness constraint |
 | Delivery control | Human-reviewed, protected, squash-merged pull requests |
 | Work decomposition | Story per vertical slice; functionality-scoped subtask is the unit of branch, PR, and merge |
-| Non-slice work | Standing `Agent workflow hardening` epic holding independent story-level Tasks; never completed and does not gate Stage 1 |
+| Non-slice work | Two standing epics — `Agent workflow hardening` (governs the agents) and `Repository and CI tooling` (affects any contributor) — holding independent story-level Tasks; never completed and do not gate Stage 1 |
 | Agent orchestration | Manual invocation only; `Agent(<name>)` requires user confirmation and `claude --agent <name>` is user-started; no unattended coordinator |
 | Deployment | Deferred beyond Stage 1 |
 

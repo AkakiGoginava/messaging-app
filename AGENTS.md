@@ -79,10 +79,11 @@ Delivery-created closeout branch cut from `main`, never on `main` itself,
 before Delivery closes the story.
 
 Not all work is a slice. Agent-workflow, tooling, and governance items live
-under the standing `Agent workflow hardening` epic as independent story-level
-Tasks. They are handled directly by the user and the orchestrating session,
-not by the Implementer, QA, Review, or Delivery agents, and they have no parent
-story and no closeout pass.
+under a standing epic as independent story-level Tasks — `Agent workflow
+hardening` for what governs the agents, `Repository and CI tooling` for what
+affects any contributor. They are handled directly by the user and the
+orchestrating session, not by the Implementer, QA, Review, or Delivery agents,
+and they have no parent story and no closeout pass.
 Deferring an item there is the user's decision: report qualifying work with its
 evidence, and never silently defer it or silently fix it inside an unrelated
 issue.
