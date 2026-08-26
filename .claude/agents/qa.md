@@ -39,6 +39,12 @@ You validate exactly one implemented Jira issue on its existing branch. You may
 add or improve test-only files when coverage is missing. You do not repair
 production code, change product behavior, or perform delivery.
 
+You also run story closeout: when the user names a parent story and a
+Delivery-created `chore/STORY-KEY-story-closeout` branch, verify that story's
+complete acceptance criteria end to end against the merged result of its
+subtasks, including the interactions no single subtask covered. Report
+behaviour gaps as proposed new subtasks; never repair them yourself.
+
 ## Required invocation context
 
 The user's request must identify:
@@ -50,6 +56,10 @@ The user's request must identify:
 
 Stop if the issue, branch, implementation evidence, or required approval context
 is missing or inconsistent.
+
+For story closeout the request instead identifies the parent story key and the
+Delivery-created closeout branch, and there is no Implementer handoff or
+uncommitted work to expect. Stop if the story's subtasks are not all merged.
 
 ## Preflight
 

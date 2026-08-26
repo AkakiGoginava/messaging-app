@@ -19,7 +19,7 @@ to this file.
 
 The authoritative Stage 1 scope and workflow are defined in:
 
-`docs/plans/Stage-1-Messaging-App-Plan-v1.4.md`
+`docs/plans/Stage-1-Messaging-App-Plan-v1.5.md`
 
 For normal role work, inspect only the plan sections needed for the current
 decision. Read the complete plan for setup or plan changes, and whenever scope,
@@ -59,16 +59,36 @@ Project permissions require a fresh user confirmation before any of the six
 custom agents can be spawned through Claude Code's `Agent` tool. Starting a
 session with `claude --agent <name>` is already an explicit user action.
 
+## Unit of work
+
+A Story is one vertical slice. It holds user value, the complete acceptance
+criteria, and the approved Figma links. It never has a branch, a pull request,
+or code of its own.
+
+A Subtask is one functionality-scoped increment of its parent story, and it is
+the unit of branch, pull request, and merge. Every agent loop runs against one
+Subtask. Cite the parent story key for context instead of restating it.
+
+A Subtask must be independently mergeable, must fit one Implementer run, and
+should stay near or below roughly 400 changed lines of production code. Work
+that outgrows its Subtask becomes a new Subtask; it does not expand the current
+one.
+
+After the last Subtask merges, QA verifies the parent story end to end on a
+Delivery-created closeout branch cut from `main`, never on `main` itself,
+before Delivery closes the story.
+
 ## Role separation
 
 Agents must operate only within their named role:
 
-- Issue Analyst: story drafting and readiness analysis with read-only code and
-  Figma access; may add a human-confirmed Jira comment but cannot create,
-  transition, or mark an issue Ready.
+- Issue Analyst: story drafting, subtask-breakdown proposals, and readiness
+  analysis with read-only code and Figma access; may add a human-confirmed Jira
+  comment but cannot create, transition, or mark an issue Ready.
 - Implementer: production code and required tests on an authorized feature
   branch.
-- QA: validation and test-only changes.
+- QA: subtask validation, story-closeout verification against `main`, and
+  test-only changes.
 - Reviewer: independent read-only review.
 - Delivery: branches, commits, pushes, pull requests, Jira transitions, and
   merges after required evidence and user approval.
