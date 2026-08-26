@@ -137,3 +137,12 @@ or blocked out-of-role action only when it affected the result.
 - Enforce authentication, conversation membership, and cross-user data
   isolation at server boundaries.
 - Do not bypass branch protection, required checks, review, or user approval.
+- A permission rule in `.claude/settings.json` is keyed to a tool's fully
+  qualified name, which embeds the MCP server name. It therefore constrains
+  only the server names it spells out. Registering the same API under a second
+  name — a different capitalization, or a user-scope duplicate of a project
+  server — defeats every rule written against the first name. When adding a
+  Jira or Figma rule, cover every registered spelling, and prefer removing a
+  duplicate registration over mirroring rules across both.
+- Report a control that does not enforce what it claims; never route around it
+  quietly, and never treat its existence as proof that it works.

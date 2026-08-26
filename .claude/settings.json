@@ -30,8 +30,6 @@
       "PowerShell(Test-Path:*)"
     ],
     "deny": [
-      "mcp__atlassian__editJiraIssue",
-      "mcp__Atlassian__editJiraIssue",
       "Read(**/.env)",
       "Read(**/*.pem)",
       "Read(**/*.key)"
@@ -39,6 +37,8 @@
     "ask": [
       "mcp__atlassian__createJiraIssue",
       "mcp__Atlassian__createJiraIssue",
+      "mcp__atlassian__editJiraIssue",
+      "mcp__Atlassian__editJiraIssue",
       "Agent(figma-designer)",
       "Agent(issue-analyst)",
       "Agent(implementer)",
@@ -46,7 +46,9 @@
       "Agent(review)",
       "Agent(delivery)",
       "mcp__atlassian__addCommentToJiraIssue",
-      "mcp__atlassian__transitionJiraIssue"
+      "mcp__Atlassian__addCommentToJiraIssue",
+      "mcp__atlassian__transitionJiraIssue",
+      "mcp__Atlassian__transitionJiraIssue"
     ]
   }
 }
