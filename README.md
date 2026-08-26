@@ -2,7 +2,7 @@
 
 This project is governed by the Stage 1 plan:
 
-- [Project plan](docs/plans/Stage-1-Messaging-App-Plan-v1.5.md)
+- [Project plan](docs/plans/Stage-1-Messaging-App-Plan.md)
 
 Stage 1 is a responsive one-to-one messaging MVP with a human-gated agent
 workflow. Production deployment and all explicitly deferred features remain

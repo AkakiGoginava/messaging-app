@@ -9,7 +9,7 @@
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
-| 1.5 | 2026-08-26 | Project foundation | Replaced the one-story-per-vertical-slice unit of delivery with Story plus functionality-scoped Subtask decomposition, moved the branch, pull-request, and merge boundary to the subtask, and added task sizing rules and a story closeout pass; introduced standing epics for non-slice agent-workflow and tooling work. |
+| 1.5 | 2026-08-26 | Project foundation | Replaced the one-story-per-vertical-slice unit of delivery with Story plus functionality-scoped Subtask decomposition, moved the branch, pull-request, and merge boundary to the subtask, and added task sizing rules and a story closeout pass; introduced standing epics for non-slice agent-workflow and tooling work handled outside the subagent loop; removed the version from the plan filename. |
 | 1.4 | 2026-08-03 | Project foundation | Password policy changed to a 12-128 character minimum with at least one uppercase letter and one digit, replacing the plain 15-128 character length rule. |
 | 1.3 | 2026-07-30 | Project foundation | Removed generated PDF distribution and renderer requirements; Markdown is now the sole maintained plan artifact. |
 | 1.2 | 2026-07-30 | Project foundation | Defined the exact setup-phase Figma file, page, draft-section, access, and evidence-link requirements. |
@@ -262,8 +262,7 @@ A standing epic differs from a story in three ways:
   nothing.
 - It is never completed. Stage 1 completion does not require it to be empty.
 
-Everything else is unchanged: each item runs the normal per-issue agent loop
-and obeys the sizing rules in `Story and task decomposition`.
+Each item still obeys the sizing rules in `Story and task decomposition`.
 
 Admission criteria. An item belongs in a standing epic only when all of the
 following hold:
@@ -274,6 +273,26 @@ following hold:
   story.
 - It is recorded with the evidence that produced it: the commit observed, the
   file and line, and the role that found it.
+
+Execution model. Standing-epic items are handled directly by the user and the
+orchestrating Claude Code session. They do not run the Implementer, QA, Review,
+or Delivery agents, and the `Repeat for every Ready subtask` loop does not
+apply to them.
+
+The gates that remain are the ones that do not depend on a subagent:
+
+- Protected `main`, required CI checks, and no bypass.
+- One pull request per item, reviewed and approved by the user.
+- The user authorizes every merge.
+- Jira transitions and evidence recorded on the item.
+
+This is a deliberate trade. These items are small, meta, and mostly touch
+repository governance and tooling rather than product behaviour, so the agent
+loop costs more than it returns. The cost is that no independent role reads the
+change before the user does, and two items already in this epic exist precisely
+because coordinator-authored controls looked correct until an independent role
+read them. The user may still ask for a Review pass on any individual item;
+nothing here forbids it.
 
 Scheduling and blocking:
 
@@ -311,8 +330,9 @@ unrelated issue.
 
 ### Repeat for every Ready subtask
 
-A standing-epic Task runs this same loop, reading its epic where a subtask
-reads its parent story, and skipping the parent-story transition in step 2.
+This loop covers subtasks under a product story. Standing-epic Tasks are
+handled directly by the user and the orchestrator instead; see `Standing epics
+and non-slice work`.
 
 1. Select one `Ready` subtask and manually invoke the Issue Analyst Agent with
    its key. It verifies readiness against the parent story rather than
@@ -417,12 +437,16 @@ traces, and cross-browser support as documented in its
 
 Maintain one authoritative deliverable:
 
-- `docs/plans/Stage-1-Messaging-App-Plan-v1.5.md` as the editable and
+- `docs/plans/Stage-1-Messaging-App-Plan.md` as the editable and
   distributable source.
 
-Future refinements update the Markdown source, append the revision history,
-increment the version, update repository references, and validate its structure
-and links. Generated PDF copies are not required or maintained.
+The filename carries no version. The current version lives in the document
+header and the revision history, so a version bump never renames the file or
+invalidates a reference to it. Do not reintroduce a versioned filename.
+
+Future refinements update the Markdown source, append a revision-history row,
+increment the version in the header, and validate the document structure and
+links. Generated PDF copies are not required or maintained.
 
 ### Assumptions
 

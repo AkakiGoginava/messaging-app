@@ -19,7 +19,7 @@ to this file.
 
 The authoritative Stage 1 scope and workflow are defined in:
 
-`docs/plans/Stage-1-Messaging-App-Plan-v1.5.md`
+`docs/plans/Stage-1-Messaging-App-Plan.md`
 
 For normal role work, inspect only the plan sections needed for the current
 decision. Read the complete plan for setup or plan changes, and whenever scope,
@@ -80,7 +80,9 @@ before Delivery closes the story.
 
 Not all work is a slice. Agent-workflow, tooling, and governance items live
 under the standing `Agent workflow hardening` epic as independent story-level
-Tasks. They run the same loop but have no parent story and no closeout pass.
+Tasks. They are handled directly by the user and the orchestrating session,
+not by the Implementer, QA, Review, or Delivery agents, and they have no parent
+story and no closeout pass.
 Deferring an item there is the user's decision: report qualifying work with its
 evidence, and never silently defer it or silently fix it inside an unrelated
 issue.
