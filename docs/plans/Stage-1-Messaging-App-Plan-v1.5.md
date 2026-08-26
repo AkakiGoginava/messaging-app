@@ -9,7 +9,7 @@
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
-| 1.5 | 2026-08-26 | Project foundation | Replaced the one-story-per-vertical-slice unit of delivery with Story plus functionality-scoped Subtask decomposition, moved the branch, pull-request, and merge boundary to the subtask, and added task sizing rules and a story closeout pass. |
+| 1.5 | 2026-08-26 | Project foundation | Replaced the one-story-per-vertical-slice unit of delivery with Story plus functionality-scoped Subtask decomposition, moved the branch, pull-request, and merge boundary to the subtask, and added task sizing rules and a story closeout pass; introduced standing epics for non-slice agent-workflow and tooling work. |
 | 1.4 | 2026-08-03 | Project foundation | Password policy changed to a 12-128 character minimum with at least one uppercase letter and one digit, replacing the plain 15-128 character length rule. |
 | 1.3 | 2026-07-30 | Project foundation | Removed generated PDF distribution and renderer requirements; Markdown is now the sole maintained plan artifact. |
 | 1.2 | 2026-07-30 | Project foundation | Defined the exact setup-phase Figma file, page, draft-section, access, and evidence-link requirements. |
@@ -165,7 +165,8 @@ and
 1. Create the GitHub repository and enable protected-branch rules.
 2. Create a Jira project with `Backlog`, `Ready`, `In Progress`, `In Review`,
    and `Done`.
-3. Create the Stage 1 Jira epic.
+3. Create the Stage 1 Jira epic, and the `Agent workflow hardening` standing
+   epic described in `Standing epics and non-slice work`.
 4. Prepare the setup-phase Figma structure:
    - Create one Figma Design file named `Messaging App`.
    - Ensure the user owns or administers the file and the identity authenticated
@@ -241,6 +242,51 @@ Sizing signals:
   remainder into a new subtask instead of extending the current one.
 - Only the user creates subtasks, and only the user marks each one `Ready`.
 
+### Standing epics and non-slice work
+
+Not all work is a product vertical slice. Agent-workflow hardening, repository
+and CI tooling, and governance changes have no user-facing acceptance criteria
+and no Figma context, and their items are mutually independent rather than
+increments of one capability.
+
+Such work lives under a standing epic that stays open for the life of the
+project and receives items as they are found. Stage 1 has one:
+`Agent workflow hardening`.
+
+A standing epic differs from a story in three ways:
+
+- Its children are Tasks at story level, not subtasks. Each is independently
+  marked `Ready` and carries its own branch, pull request, and merge.
+- The story layer and `Story closeout` do not apply. Unrelated tooling fixes
+  share no acceptance criteria, so an end-to-end closeout pass would verify
+  nothing.
+- It is never completed. Stage 1 completion does not require it to be empty.
+
+Everything else is unchanged: each item runs the normal per-issue agent loop
+and obeys the sizing rules in `Story and task decomposition`.
+
+Admission criteria. An item belongs in a standing epic only when all of the
+following hold:
+
+- It is not a Stage 1 product behaviour. Product defects and deferred product
+  hardening stay in the product backlog under the Stage 1 epic.
+- It is independently mergeable and does not depend on an unmerged product
+  story.
+- It is recorded with the evidence that produced it: the commit observed, the
+  file and line, and the role that found it.
+
+Scheduling and blocking:
+
+- Work standing-epic items between stories rather than inside one, so a
+  product story is not interrupted by unrelated tooling changes.
+- An item that blocks a product story is marked as blocking that story and must
+  merge before the story's first subtask starts.
+
+Deferring an item into a standing epic is the user's decision, not an agent's.
+An agent that finds qualifying work reports it with its evidence and stops. It
+does not silently defer the item, and it does not silently fix it inside an
+unrelated issue.
+
 ### Design and task preparation
 
 1. Invoke the Figma Design Agent with the Stage 1 feature boundary.
@@ -264,6 +310,9 @@ Sizing signals:
    the story instead of restating it.
 
 ### Repeat for every Ready subtask
+
+A standing-epic Task runs this same loop, reading its epic where a subtask
+reads its parent story, and skipping the parent-story transition in step 2.
 
 1. Select one `Ready` subtask and manually invoke the Issue Analyst Agent with
    its key. It verifies readiness against the parent story rather than
@@ -361,6 +410,8 @@ traces, and cross-browser support as documented in its
   browser widths.
 - Deferred features remain absent from the implementation and backlog unless
   the user creates new work.
+- Open items in a standing epic do not block Stage 1 completion, except any
+  item marked as blocking a product story.
 
 ### Updateable plan artifact
 
@@ -398,6 +449,7 @@ and links. Generated PDF copies are not required or maintained.
 | Conversation uniqueness | Canonical participant-pair key with a database uniqueness constraint |
 | Delivery control | Human-reviewed, protected, squash-merged pull requests |
 | Work decomposition | Story per vertical slice; functionality-scoped subtask is the unit of branch, PR, and merge |
+| Non-slice work | Standing `Agent workflow hardening` epic holding independent story-level Tasks; never completed and does not gate Stage 1 |
 | Agent orchestration | Manual invocation only; `Agent(<name>)` requires user confirmation and `claude --agent <name>` is user-started; no unattended coordinator |
 | Deployment | Deferred beyond Stage 1 |
 

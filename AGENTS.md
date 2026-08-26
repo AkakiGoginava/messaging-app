@@ -78,6 +78,13 @@ After the last Subtask merges, QA verifies the parent story end to end on a
 Delivery-created closeout branch cut from `main`, never on `main` itself,
 before Delivery closes the story.
 
+Not all work is a slice. Agent-workflow, tooling, and governance items live
+under the standing `Agent workflow hardening` epic as independent story-level
+Tasks. They run the same loop but have no parent story and no closeout pass.
+Deferring an item there is the user's decision: report qualifying work with its
+evidence, and never silently defer it or silently fix it inside an unrelated
+issue.
+
 ## Role separation
 
 Agents must operate only within their named role:
