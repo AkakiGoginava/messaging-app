@@ -490,16 +490,30 @@ A green CI run is never a substitute for either.
 The guard rejects newlines in a command, so a multi-line pull-request
 description must be passed with `--body-file`. Because that content reaches a
 public pull request without appearing on the command line, the guard validates
-the file itself: it must be `.md` or `.txt`, must not be a `.env` file or a
-key/certificate, must be non-empty and under 64 KB, must contain
-`Key: <JIRA-KEY>`, and must not contain a credential-shaped string such as a
-GitHub token, AWS access key ID, Slack token, or PEM private-key header. The
-same validation applies to `gh pr create` and `gh pr edit`.
+the file itself.
 
-Supply the body file path in the `DELIVER PR` invocation and keep the file
-outside the repository working tree so it cannot be committed. The Delivery
-Agent has no file-writing tool and will stop rather than invent a shortened
-description.
+A body file must be a direct child of `.claude/pr-bodies/`. Validating an
+arbitrary path was tried and abandoned under MA-6: `..` traversal, a junction
+on an intermediate directory, a UNC path, a symlink and a hardlink each
+defeated a different name-based check, and the short alias `-F` bypassed the
+regex entirely. Requiring one known parent directory closes that class at once
+and needs no link resolution, so it behaves identically under Windows
+PowerShell and PowerShell Core.
+
+Within that directory the file must be `.md` or `.txt`, non-empty and under
+64 KB, must contain `Key: <JIRA-KEY>`, must not look like an environment file,
+and must not contain a credential-shaped string such as a GitHub token, AWS
+access key ID, Slack token, PEM private-key header, or a URL carrying inline
+credentials. The content checks are the backstop for a link placed inside the
+directory, which no name check can see through. Exactly one `--body-file` or
+`-F` may be supplied; `gh` honours the last when several are given, so the
+guard refuses to guess. The same validation applies to `gh pr create` and
+`gh pr edit`.
+
+Write the body file into `.claude/pr-bodies/` and supply that path in the
+`DELIVER PR` invocation. File contents there are gitignored, so they cannot be
+committed by accident. The Delivery Agent has no file-writing tool and will
+stop rather than invent a shortened description.
 The Delivery Agent opens pull requests as `akakiGoginavaAgent` and requests
 `AkakiGoginava` as the human reviewer.
 

@@ -223,41 +223,65 @@ try {
     $null = New-Item -ItemType Directory -Path (Join-Path $testRoot "src")
     $null = New-Item -ItemType Directory -Path (Join-Path $testRoot "tests")
 
-    # Pull-request body-file fixtures. The credential fixture is assembled at
+    # Pull-request body-file fixtures. The guard accepts a body file only as a
+    # direct child of .claude/pr-bodies, so the valid ones live there and the
+    # rejected ones deliberately do not. The credential fixture is assembled at
     # runtime so no token-shaped literal exists in this file for a secret
     # scanner to flag.
-    Set-Content -LiteralPath (Join-Path $testRoot "pr-body.md") -Value (
+    $bodyDirectory = Join-Path $testRoot ".claude/pr-bodies"
+    $null = New-Item -ItemType Directory -Path $bodyDirectory -Force
+
+    Set-Content -LiteralPath (Join-Path $bodyDirectory "pr-body.md") -Value (
         "Key: MSG-1`n`nScope, migrations, and rollback notes."
     )
-    Set-Content -LiteralPath (Join-Path $testRoot "pr-body-no-key.md") -Value (
+    Set-Content -LiteralPath (Join-Path $bodyDirectory "pr-body-no-key.md") -Value (
         "Scope, migrations, and rollback notes."
     )
-    Set-Content -LiteralPath (Join-Path $testRoot "pr-body-secret.md") -Value (
+    Set-Content -LiteralPath (Join-Path $bodyDirectory "pr-body-secret.md") -Value (
         "Key: MSG-1`n`nToken " + "ghp_" + ("A" * 20)
+    )
+    Set-Content -LiteralPath (Join-Path $bodyDirectory "seed.txt.exe") -Value (
+        "Key: MSG-1`n`nWrong extension."
+    )
+    Set-Content -LiteralPath (Join-Path $bodyDirectory "sp ace.md") -Value (
+        "Key: MSG-1`n`nQuoted path with whitespace."
+    )
+    # Env-file shape with no credential-shaped value, so it can only be
+    # caught by the assignment-count check rather than a secret pattern.
+    Set-Content -LiteralPath (Join-Path $bodyDirectory "env-shape.md") -Value (
+        "Key: MSG-1`nSERVICE_HOST=localhost`nSERVICE_PORT=5432`nSERVICE_NAME=app"
     )
     Set-Content -LiteralPath (Join-Path $testRoot ".env") -Value (
         "Key: MSG-1`nDATABASE_URL=postgresql://user:pw@host/db"
     )
-
-
-    # MA-6 fixtures. `outside-body.md` sits above the project root; the symlink
-    # is created only where the platform permits it, and its case is skipped
-    # otherwise rather than silently passing.
-    $outsideRoot = [System.IO.Path]::GetFullPath(
-        (Join-Path $testRootBase ("agent-guard-outside-" + [guid]::NewGuid()))
+    # Outside the body directory but inside the project: the parent-directory
+    # rule must reject it on location alone.
+    Set-Content -LiteralPath (Join-Path $testRoot "outside-body.md") -Value (
+        "Key: MSG-1`n`nOutside the body directory."
     )
-    $null = New-Item -ItemType Directory -Path $outsideRoot
-    $outsideBodyPath = Join-Path $outsideRoot "outside-body.md"
-    Set-Content -LiteralPath $outsideBodyPath -Value "Key: MSG-1`n`nOutside the project."
 
-    $symlinkBodyPath = Join-Path $testRoot "linked-body.md"
-    $symlinkSupported = $true
+    # MA-6 link fixtures. A hardlink needs no elevation and has no link target
+    # to resolve, so only content inspection can catch it. A junction likewise
+    # needs no elevation. Both are created where the platform allows and the
+    # corresponding case is skipped otherwise, never silently passed.
+    $hardLinkPath = Join-Path $bodyDirectory "hard.md"
+    $hardLinkSupported = $true
     try {
-        $null = New-Item -ItemType SymbolicLink -Path $symlinkBodyPath `
+        $null = New-Item -ItemType HardLink -Path $hardLinkPath `
             -Target (Join-Path $testRoot ".env") -ErrorAction Stop
     }
     catch {
-        $symlinkSupported = $false
+        $hardLinkSupported = $false
+    }
+
+    $junctionPath = Join-Path $testRoot "jn"
+    $junctionSupported = $true
+    try {
+        $null = New-Item -ItemType Junction -Path $junctionPath `
+            -Target $testRoot -ErrorAction Stop
+    }
+    catch {
+        $junctionSupported = $false
     }
 
     $implementerGuard = Join-Path $projectPath ".claude/hooks/implementer-guard.ps1"
@@ -409,7 +433,7 @@ try {
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{
-                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body.md"
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/pr-body.md"
             }
             Allow = $true
         },
@@ -418,7 +442,7 @@ try {
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{
-                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body-no-key.md"
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/pr-body-no-key.md"
             }
             Allow = $false
         },
@@ -427,7 +451,7 @@ try {
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{
-                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body-secret.md"
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/pr-body-secret.md"
             }
             Allow = $false
         },
@@ -445,7 +469,7 @@ try {
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{
-                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file absent.md"
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/absent.md"
             }
             Allow = $false
         },
@@ -454,16 +478,75 @@ try {
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{
-                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file seed.txt.exe"
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/seed.txt.exe"
             }
             Allow = $false
+        },
+        @{
+            Name = "Delivery blocks a body file shaped like an env file"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/env-shape.md"
+            }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery blocks the -F alias pointing at a secret"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' -F .env"
+            }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery blocks a mixed --body-file and -F pair"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/pr-body.md -F .env"
+            }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery blocks the -F alias on PR edit"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{ command = "gh pr edit -F .env" }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery blocks a body-file flag with no value"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{ command = "gh pr edit --body-file" }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery allows a quoted body path containing whitespace"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file `".claude/pr-bodies/sp ace.md`""
+            }
+            Allow = $true
+        },
+        @{
+            Name = "Delivery does not mistake -Force for the -F alias"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/pr-body.md -Force"
+            }
+            Allow = $true
         },
         @{
             Name = "Delivery blocks duplicate --body-file flags"
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{
-                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body.md --body-file pr-body-secret.md"
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/pr-body.md --body-file .claude/pr-bodies/pr-body-secret.md"
             }
             Allow = $false
         },
@@ -472,7 +555,7 @@ try {
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{
-                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file $outsideBodyPath"
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file outside-body.md"
             }
             Allow = $false
         },
@@ -481,7 +564,7 @@ try {
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{
-                command = "gh pr edit --body-file pr-body-no-key.md"
+                command = "gh pr edit --body-file .claude/pr-bodies/pr-body-no-key.md"
             }
             Allow = $false
         },
@@ -509,21 +592,48 @@ try {
         }
     )
 
-    # Symlink creation needs Developer Mode or elevation on Windows. Skip
-    # loudly rather than silently passing a case that never ran.
-    if ($symlinkSupported) {
+
+    # These need no elevation, so they normally run everywhere. Where a
+    # platform refuses, the case fails rather than warns when the guard is
+    # actually deployed there -- a silently skipped case on the deployment
+    # platform is how an inert fix reported green during the first attempt at
+    # this issue.
+    $isWindowsHost = [System.IO.Path]::DirectorySeparatorChar -eq "\"
+
+    if ($hardLinkSupported) {
         $cases += @{
-            Name = "Delivery blocks a .md symlink pointing at a secret"
+            Name = "Delivery blocks a hardlinked body file holding env content"
             Guard = $deliveryGuard
             Tool = "PowerShell"
             Input = @{
-                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file linked-body.md"
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file .claude/pr-bodies/hard.md"
             }
             Allow = $false
         }
     }
+    elseif ($isWindowsHost) {
+        throw "Hardlink fixture could not be created on Windows, where this guard is deployed."
+    }
     else {
-        Write-Warning "Skipped: symlink body-file case (symlinks unavailable on this host)."
+        Write-Warning "Skipped: hardlink body-file case (unavailable on this host)."
+    }
+
+    if ($junctionSupported) {
+        $cases += @{
+            Name = "Delivery blocks a body file reached through a junction"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file jn/.claude/pr-bodies/pr-body.md"
+            }
+            Allow = $false
+        }
+    }
+    elseif ($isWindowsHost) {
+        throw "Junction fixture could not be created on Windows, where this guard is deployed."
+    }
+    else {
+        Write-Warning "Skipped: junction body-file case (unavailable on this host)."
     }
 
     foreach ($case in $cases) {
@@ -550,17 +660,5 @@ finally {
         )
     ) {
         Remove-Item -LiteralPath $testRoot -Recurse -Force
-    }
-
-    if (
-        $outsideRoot -and
-        (Test-Path -LiteralPath $outsideRoot) -and
-        $outsideRoot.StartsWith(
-            $testRootBase.TrimEnd("\", "/") +
-            [System.IO.Path]::DirectorySeparatorChar,
-            [System.StringComparison]::OrdinalIgnoreCase
-        )
-    ) {
-        Remove-Item -LiteralPath $outsideRoot -Recurse -Force
     }
 }

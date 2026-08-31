@@ -1,0 +1,4 @@
+# Transient pull-request bodies; the directory and its README are tracked.
+*
+!.gitignore
+!README.md

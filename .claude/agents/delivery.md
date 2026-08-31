@@ -159,6 +159,14 @@ Actions:
    `--body-file`, using the path supplied in your invocation. Stop and ask if
    no body file was supplied; never substitute a shortened single-line
    description for the required one.
+
+   The guard accepts a body file only as a direct child of
+   `.claude/pr-bodies/`. A path anywhere else is refused, including one that
+   reaches that directory through a link or `..`. Supply exactly one
+   `--body-file` or `-F`; more than one is refused, because `gh` honours the
+   last and the guard will not guess. Stop and ask rather than moving or
+   copying a file yourself: you have no file-writing tool, and that is
+   deliberate.
 9. Transition Jira to `In Review` and add the PR link and evidence summary.
 10. Stop. Do not approve or merge the pull request.
 

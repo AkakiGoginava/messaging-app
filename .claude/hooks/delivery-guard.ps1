@@ -95,9 +95,20 @@ function Test-PullRequestBodyFile {
     # A pull-request description cannot be passed inline: this guard rejects
     # newlines in a command, and the Delivery Agent has no file-writing tool.
     # `--body-file` is therefore the only way to supply the structured
-    # description `DELIVER PR` requires. Because that content reaches a public
-    # pull request without the guard seeing it on the command line, the file
-    # itself is validated here instead.
+    # description `DELIVER PR` requires, and its content reaches a public pull
+    # request without the guard seeing it on the command line.
+    #
+    # Body files must live directly in one designated directory. Validating an
+    # arbitrary path was tried and abandoned: every check that reasons about a
+    # path string is defeated by some form the author did not anticipate --
+    # traversal, a junction on an intermediate directory, a UNC path, a
+    # symlink, a hardlink. Requiring the resolved parent to equal one known
+    # directory closes that whole class at once, and needs no link resolution,
+    # so it behaves identically on Windows PowerShell and PowerShell Core.
+    #
+    # A hardlink or symlink placed directly inside the directory still points
+    # wherever it likes, so content inspection below is the backstop rather
+    # than an extra.
     #
     # Returns $true when a validated body file was supplied, $false when the
     # command uses no body file. Blocks rather than returning on any failure.
@@ -108,62 +119,64 @@ function Test-PullRequestBodyFile {
         [string]$IssueKey
     )
 
-    # `gh` honours the LAST --body-file when several are supplied, so matching
-    # only the first would validate one file while a second one is published.
-    # Reject the ambiguity rather than guessing which gh will use.
-    $bodyFileMatches = [regex]::Matches(
-        $Command,
-        '(?i)--body-file[=\s]+(?<q>["'']?)(?<path>[^"''\s]+)\k<q>'
-    )
-    if ($bodyFileMatches.Count -eq 0) {
+    # `-F` is the documented short alias for `--body-file`, and `gh` honours
+    # the last occurrence when several are supplied. Count flags and parsed
+    # values separately so an unparseable value fails closed instead of
+    # silently skipping validation.
+    $flagPattern = '(?i)(?<![\w-])(?:--body-file|-F)(?![\w-])'
+    $valuePattern = '(?i)(?<![\w-])(?:--body-file|-F)(?:\s*=\s*|\s+)' +
+        '(?:"(?<path>[^"]*)"|''(?<path>[^'']*)''|(?<path>[^\s"'']+))'
+
+    $flagCount = ([regex]::Matches($Command, $flagPattern)).Count
+    if ($flagCount -eq 0) {
         return $false
     }
-    if ($bodyFileMatches.Count -gt 1) {
-        Block-Action "only one --body-file may be supplied"
+    if ($flagCount -gt 1) {
+        Block-Action "only one --body-file or -F may be supplied"
     }
 
-    $requestedPath = $bodyFileMatches[0].Groups["path"].Value
+    $valueMatches = [regex]::Matches($Command, $valuePattern)
+    if ($valueMatches.Count -ne 1) {
+        Block-Action "the --body-file value could not be read"
+    }
+
+    $requestedPath = $valueMatches[0].Groups["path"].Value
+    if ([string]::IsNullOrWhiteSpace($requestedPath)) {
+        Block-Action "the --body-file value could not be read"
+    }
+
+    $bodyDirectory = [System.IO.Path]::GetFullPath(
+        [System.IO.Path]::Combine($ProjectPath, ".claude", "pr-bodies")
+    )
     $bodyPath = Get-NormalizedPath -Path $requestedPath -BasePath $WorkingDirectory
+
+    # Direct child only. A junction or symlinked directory anywhere in the
+    # chain produces a different parent, so it fails here without the guard
+    # needing to resolve anything.
+    $parentDirectory = [System.IO.Path]::GetDirectoryName($bodyPath)
+    if ([string]::IsNullOrEmpty($parentDirectory)) {
+        Block-Action "the pull-request body file must live in .claude/pr-bodies"
+    }
+    $pathComparison = if ([System.IO.Path]::DirectorySeparatorChar -eq "\") {
+        [System.StringComparison]::OrdinalIgnoreCase
+    }
+    else {
+        [System.StringComparison]::Ordinal
+    }
+    if (-not [string]::Equals(
+            [System.IO.Path]::GetFullPath($parentDirectory).TrimEnd("\", "/"),
+            $bodyDirectory.TrimEnd("\", "/"),
+            $pathComparison
+        )) {
+        Block-Action "the pull-request body file must live in .claude/pr-bodies"
+    }
+
+    if ([System.IO.Path]::GetExtension($bodyPath) -notin @(".md", ".txt")) {
+        Block-Action "the pull-request body file must be a .md or .txt file"
+    }
 
     if (-not (Test-Path -LiteralPath $bodyPath -PathType Leaf)) {
         Block-Action "the pull-request body file '$requestedPath' does not exist"
-    }
-
-    # Resolve a link before the checks below: an extension or sensitive-name
-    # test against the literal path is defeated by a .md symlink whose target
-    # is a secret.
-    $resolvedBodyPath = $bodyPath
-    try {
-        $bodyItem = Get-Item -LiteralPath $bodyPath -Force
-        if ($bodyItem.LinkTarget) {
-            $resolvedBodyPath = Get-NormalizedPath `
-                -Path $bodyItem.LinkTarget `
-                -BasePath ([System.IO.Path]::GetDirectoryName($bodyPath))
-        }
-    }
-    catch {
-        Block-Action "the pull-request body file could not be resolved"
-    }
-
-    # The literal path and its link target must both sit inside the project,
-    # matching the containment already enforced on the working directory.
-    $bodyProjectPrefix = $ProjectPath.TrimEnd("\", "/") +
-        [System.IO.Path]::DirectorySeparatorChar
-    foreach ($candidate in @($bodyPath, $resolvedBodyPath)) {
-        if (
-            -not $candidate.StartsWith(
-                $bodyProjectPrefix,
-                [System.StringComparison]::OrdinalIgnoreCase
-            )
-        ) {
-            Block-Action "the pull-request body file is outside the project"
-        }
-        if ($candidate -match "(?i)(^|[\\/])\.env($|\.)|\.(pem|key|p12|pfx)$") {
-            Block-Action "a sensitive file cannot be used as a pull-request description"
-        }
-        if ([System.IO.Path]::GetExtension($candidate) -notin @(".md", ".txt")) {
-            Block-Action "the pull-request body file must be a .md or .txt file"
-        }
     }
 
     if ((Get-Item -LiteralPath $bodyPath).Length -gt 65536) {
@@ -183,12 +196,29 @@ function Test-PullRequestBodyFile {
         "github_pat_[A-Za-z0-9_]{20,}",
         "-----BEGIN [A-Z ]*PRIVATE KEY-----",
         "\bAKIA[0-9A-Z]{16}\b",
-        "\bxox[baprs]-[A-Za-z0-9-]{10,}"
+        "\bxox[baprs]-[A-Za-z0-9-]{10,}",
+        # A URL carrying inline credentials is unambiguous whatever the file
+        # is called, and catches a single-line .env that the shape check
+        # below would not reach.
+        "[A-Za-z][A-Za-z0-9+.-]*://[^\s:@/]+:[^\s:@/]+@"
     )
     foreach ($secretPattern in $secretPatterns) {
         if ($body -match $secretPattern) {
             Block-Action "the pull-request body file contains a credential-shaped string"
         }
+    }
+
+    # Environment-file shape, whatever the file is called. This is what stops
+    # a hardlink or symlink to `.env` that sits in the right directory with the
+    # right extension: no name or link check can see through those, but the
+    # content still looks like an env file. Three assignments rather than one,
+    # so a pull-request body that documents a couple of variables still passes.
+    $assignmentLines = [regex]::Matches(
+        $body,
+        '(?m)^\s*(?:export\s+)?[A-Z][A-Z0-9_]{2,}\s*='
+    )
+    if ($assignmentLines.Count -ge 3) {
+        Block-Action "the pull-request body file looks like an environment file"
     }
 
     $escapedIssueKey = [regex]::Escape($IssueKey)
