@@ -63,12 +63,13 @@ function Invoke-Guard {
     param(
         [string]$Guard,
         [string]$ToolName,
-        [hashtable]$ToolInput
+        [hashtable]$ToolInput,
+        [string]$Cwd = ""
     )
 
     $event = @{
         tool_name = $ToolName
-        cwd = $testRoot
+        cwd = if ([string]::IsNullOrEmpty($Cwd)) { $testRoot } else { $Cwd }
         tool_input = $ToolInput
     } | ConvertTo-Json -Depth 6 -Compress
 
@@ -116,14 +117,33 @@ function Assert-GuardResult {
         [string]$Name,
         [hashtable]$Result,
         [bool]$ShouldAllow,
-        [string]$StdoutPattern = ""
+        [string]$StdoutPattern = "",
+        [string]$StderrPattern = ""
     )
 
-    $allowed = $Result.ExitCode -eq 0
-    if ($allowed -ne $ShouldAllow) {
+    # A PreToolUse hook blocks a tool call only on exit code 2. Any other
+    # non-zero exit is a hook error and the command proceeds. Asserting merely
+    # "not zero" therefore scores a crash as a successful block, which is how
+    # a guard that died on an unexpected exception passed every check in this
+    # suite while providing no protection at all. Assert the exact contract.
+    if ($ShouldAllow) {
+        if ($Result.ExitCode -ne 0) {
+            throw (
+                "$Name expected the command to be allowed (exit 0) but exit " +
+                "code was $($Result.ExitCode). stderr: $($Result.Stderr)"
+            )
+        }
+    }
+    elseif ($Result.ExitCode -ne 2) {
+        $detail = if ($Result.ExitCode -eq 0) {
+            "the command was allowed through"
+        }
+        else {
+            "the guard failed open: only exit 2 blocks a tool call"
+        }
         throw (
-            "$Name expected allow=$ShouldAllow but exit code was " +
-            "$($Result.ExitCode). stderr: $($Result.Stderr)"
+            "$Name expected a block (exit 2) but exit code was " +
+            "$($Result.ExitCode) -- $detail. stderr: $($Result.Stderr)"
         )
     }
 
@@ -132,6 +152,22 @@ function Assert-GuardResult {
         $Result.Stdout -notmatch $StdoutPattern
     ) {
         throw "$Name did not emit expected output pattern '$StdoutPattern'."
+    }
+
+    # Exit 2 alone does not identify why a guard blocked. An odd working
+    # directory reaches the "outside the project" rule and exits 2 through the
+    # normal path, with no exception involved -- so a fault case that only
+    # checks the exit code would pass even if the trap never fired. The fault
+    # cases assert the trap's own message instead of inferring it, which also
+    # removes the need to reason about which platform throws where.
+    if (
+        -not [string]::IsNullOrWhiteSpace($StderrPattern) -and
+        $Result.Stderr -notmatch $StderrPattern
+    ) {
+        throw (
+            "$Name did not emit expected stderr pattern '$StderrPattern'. " +
+            "stderr: $($Result.Stderr)"
+        )
     }
 }
 
@@ -238,6 +274,31 @@ try {
     Set-Content -LiteralPath (Join-Path $testRoot ".env") -Value (
         "Key: MSG-1`nDATABASE_URL=postgresql://user:pw@host/db"
     )
+
+
+    # Hidden-attribute body files. On Unix the Hidden attribute has no effect
+    # on a name that does not begin with a dot, so these two cases degrade to
+    # ordinary body-file cases there rather than failing. That is acceptable --
+    # the fail-open they pin is Windows-only -- but it is stated here because
+    # the over-long-path cases below are gated and warned about, and silently
+    # weaker coverage is the pattern this issue exists to remove.
+    #
+    # Test-Path returns true for these but
+    # Get-Item without -Force throws, which on main exited 1 -- so the command
+    # proceeded with the body wholly unvalidated: no size cap, no credential
+    # scan, no Jira-key check. A hidden .md arrives by ordinary means, such as
+    # a copy that carried the attribute across.
+    $hiddenBodyPath = Join-Path $testRoot "pr-body-hidden.md"
+    Set-Content -LiteralPath $hiddenBodyPath -Value (
+        "Key: MSG-1`n`nValid description in a hidden file."
+    )
+    (Get-Item -LiteralPath $hiddenBodyPath -Force).Attributes = "Hidden"
+
+    $hiddenNoKeyPath = Join-Path $testRoot "pr-body-hidden-no-key.md"
+    Set-Content -LiteralPath $hiddenNoKeyPath -Value (
+        "No Jira key in this hidden file."
+    )
+    (Get-Item -LiteralPath $hiddenNoKeyPath -Force).Attributes = "Hidden"
 
     $implementerGuard = Join-Path $projectPath ".claude/hooks/implementer-guard.ps1"
     $qaGuard = Join-Path $projectPath ".claude/hooks/qa-guard.ps1"
@@ -393,6 +454,24 @@ try {
             Allow = $true
         },
         @{
+            Name = "Delivery validates a hidden body file instead of skipping it"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body-hidden.md"
+            }
+            Allow = $true
+        },
+        @{
+            Name = "Delivery blocks a hidden body file missing the Jira key"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body-hidden-no-key.md"
+            }
+            Allow = $false
+        },
+        @{
             Name = "Delivery blocks a body file missing the Jira key"
             Guard = $deliveryGuard
             Tool = "PowerShell"
@@ -470,16 +549,71 @@ try {
         }
     )
 
+
+    # MA-23 fail-closed cases. Each drives a guard into an unexpected
+    # exception while running a command the guard would otherwise ALLOW, so a
+    # fail-open shows up as exit 0. Using a command the guard blocks anyway
+    # would pass whether or not the trap exists.
+    #
+    # Two fault shapes, because the obvious one is not portable. An over-long
+    # path is the accident that actually occurs on Windows, where these guards
+    # run, but Linux has no 260-character limit so GetFullPath succeeds there
+    # and the case proves nothing. A NUL in the path throws ArgumentException
+    # on both .NET Framework and .NET Core, so it exercises the trap in CI too.
+    $overLongCwd = Join-Path $testRoot ("a" * 300)
+    $nulCwd = $testRoot + [char]0 + "x"
+    $isWindowsHost = [System.IO.Path]::DirectorySeparatorChar -eq "\"
+
+    $faultGuards = @(
+        @{ Name = "Delivery"; Guard = $deliveryGuard },
+        @{ Name = "Implementer"; Guard = $implementerGuard },
+        @{ Name = "QA"; Guard = $qaGuard },
+        @{ Name = "Review"; Guard = $reviewGuard }
+    )
+
+    foreach ($faultGuard in $faultGuards) {
+        $cases += @{
+            Name = "$($faultGuard.Name) fails closed on a NUL in the working directory"
+            Guard = $faultGuard.Guard
+            Tool = "PowerShell"
+            Input = @{ command = "git status --short" }
+            Cwd = $nulCwd
+            Allow = $false
+            Stderr = "failed unexpectedly"
+        }
+
+        if ($isWindowsHost) {
+            $cases += @{
+                Name = "$($faultGuard.Name) fails closed on an over-long working directory"
+                Guard = $faultGuard.Guard
+                Tool = "PowerShell"
+                Input = @{ command = "git status --short" }
+                Cwd = $overLongCwd
+                Allow = $false
+                Stderr = "failed unexpectedly"
+            }
+        }
+    }
+
+    if (-not $isWindowsHost) {
+        Write-Warning (
+            "Skipped: over-long-path cases (no path-length limit on this " +
+            "platform). The NUL cases cover the trap here."
+        )
+    }
+
     foreach ($case in $cases) {
         $result = Invoke-Guard `
             -Guard $case.Guard `
             -ToolName $case.Tool `
-            -ToolInput $case.Input
+            -ToolInput $case.Input `
+            -Cwd $case.Cwd
         Assert-GuardResult `
             -Name $case.Name `
             -Result $result `
             -ShouldAllow $case.Allow `
-            -StdoutPattern $case.Output
+            -StdoutPattern $case.Output `
+            -StderrPattern $case.Stderr
     }
 
     Write-Output "All $($cases.Count) agent guard checks passed."
