@@ -138,8 +138,11 @@ function Test-PullRequestBodyFile {
         Block-Action "the pull-request body file '$requestedPath' does not exist"
     }
 
-    # -Force so a hidden or system file does not throw and skip the content
-    # checks below.
+    # -Force so a hidden or system file does not throw here. Before the trap
+    # above existed, that throw exited 1, which a PreToolUse hook treats as a
+    # hook error, so the body reached the pull request with no size, credential
+    # or Jira-key check at all. It would now block rather than skip, but a
+    # block on an ordinary hidden file would still be wrong.
     if ((Get-Item -LiteralPath $bodyPath -Force).Length -gt 65536) {
         Block-Action "the pull-request body file exceeds the 64 KB limit"
     }
