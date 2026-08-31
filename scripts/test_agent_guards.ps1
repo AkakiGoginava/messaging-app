@@ -63,12 +63,13 @@ function Invoke-Guard {
     param(
         [string]$Guard,
         [string]$ToolName,
-        [hashtable]$ToolInput
+        [hashtable]$ToolInput,
+        [string]$Cwd = ""
     )
 
     $event = @{
         tool_name = $ToolName
-        cwd = $testRoot
+        cwd = if ([string]::IsNullOrEmpty($Cwd)) { $testRoot } else { $Cwd }
         tool_input = $ToolInput
     } | ConvertTo-Json -Depth 6 -Compress
 
@@ -119,11 +120,29 @@ function Assert-GuardResult {
         [string]$StdoutPattern = ""
     )
 
-    $allowed = $Result.ExitCode -eq 0
-    if ($allowed -ne $ShouldAllow) {
+    # A PreToolUse hook blocks a tool call only on exit code 2. Any other
+    # non-zero exit is a hook error and the command proceeds. Asserting merely
+    # "not zero" therefore scores a crash as a successful block, which is how
+    # a guard that died on an unexpected exception passed 40 checks while
+    # providing no protection at all. Assert the exact contract.
+    if ($ShouldAllow) {
+        if ($Result.ExitCode -ne 0) {
+            throw (
+                "$Name expected the command to be allowed (exit 0) but exit " +
+                "code was $($Result.ExitCode). stderr: $($Result.Stderr)"
+            )
+        }
+    }
+    elseif ($Result.ExitCode -ne 2) {
+        $detail = if ($Result.ExitCode -eq 0) {
+            "the command was allowed through"
+        }
+        else {
+            "the guard failed open: only exit 2 blocks a tool call"
+        }
         throw (
-            "$Name expected allow=$ShouldAllow but exit code was " +
-            "$($Result.ExitCode). stderr: $($Result.Stderr)"
+            "$Name expected a block (exit 2) but exit code was " +
+            "$($Result.ExitCode) -- $detail. stderr: $($Result.Stderr)"
         )
     }
 
@@ -470,11 +489,60 @@ try {
         }
     )
 
+
+    # MA-23 fail-closed cases. Each drives a guard into an unexpected
+    # exception; without a top-level trap the guard exits 1, which a
+    # PreToolUse hook treats as a hook error rather than a block, and the
+    # command proceeds. Every one asserts exit 2 through Assert-GuardResult.
+    $overLongCwd = Join-Path $testRoot ("a" * 300)
+
+    $cases += @{
+        Name = "Delivery fails closed on an over-long working directory"
+        Guard = $deliveryGuard
+        Tool = "PowerShell"
+        Input = @{ command = "git push origin main --force" }
+        Cwd = $overLongCwd
+        Allow = $false
+    }
+    $cases += @{
+        Name = "Implementer fails closed on an over-long working directory"
+        Guard = $implementerGuard
+        Tool = "PowerShell"
+        Input = @{ command = "git status --short" }
+        Cwd = $overLongCwd
+        Allow = $false
+    }
+    $cases += @{
+        Name = "QA fails closed on an over-long working directory"
+        Guard = $qaGuard
+        Tool = "PowerShell"
+        Input = @{ command = "git status --short" }
+        Cwd = $overLongCwd
+        Allow = $false
+    }
+    $cases += @{
+        Name = "Review fails closed on an over-long working directory"
+        Guard = $reviewGuard
+        Tool = "PowerShell"
+        Input = @{ command = "git status --short" }
+        Cwd = $overLongCwd
+        Allow = $false
+    }
+    $cases += @{
+        Name = "Figma Designer fails closed on an over-long working directory"
+        Guard = $figmaGuard
+        Tool = "Edit"
+        Input = @{ file_path = "src/app.ts" }
+        Cwd = $overLongCwd
+        Allow = $false
+    }
+
     foreach ($case in $cases) {
         $result = Invoke-Guard `
             -Guard $case.Guard `
             -ToolName $case.Tool `
-            -ToolInput $case.Input
+            -ToolInput $case.Input `
+            -Cwd $case.Cwd
         Assert-GuardResult `
             -Name $case.Name `
             -Result $result `

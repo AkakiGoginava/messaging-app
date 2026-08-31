@@ -7,6 +7,14 @@ function Block-Action {
     exit 2
 }
 
+# A PreToolUse hook blocks only on exit 2; any other non-zero exit is a hook
+# error and the tool call proceeds. Without this, an unexpected exception --
+# an over-long path, a hidden file, malformed input -- exits 1 and the guard
+# silently stops guarding. Fail closed instead.
+trap {
+    Block-Action "the guard failed unexpectedly: $($_.Exception.Message)"
+}
+
 function Get-NormalizedPath {
     param(
         [string]$Path,
