@@ -1,0 +1,25 @@
+# Git already stores every text file in this repository with LF. What differs
+# is the checkout: with core.autocrlf=true on Windows, files arrive with CRLF,
+# and Prettier — configured endOfLine "lf" — then reports them as malformatted.
+# Before this file, `pnpm format:check` failed on 104 files locally while the
+# identical CI step passed on Linux, which trained everyone to ignore it.
+#
+# eol=lf pins the checkout, so the working tree matches what is stored and what
+# CI sees, regardless of a contributor's autocrlf setting.
+* text=auto eol=lf
+
+# Binary files must never be line-ending converted. text=auto detects most of
+# these, but favicon.ico contains CR bytes and is the one file in the tree that
+# a heuristic could plausibly misread, so the rules are explicit.
+*.ico binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
