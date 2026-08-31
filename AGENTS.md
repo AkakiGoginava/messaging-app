@@ -113,8 +113,9 @@ artifact snapshot with current state:
 
 - Jira: issue key, status, and updated timestamp.
 - Figma: file key, node IDs or direct links, and the user's approval reference.
-- Repository: branch, base and head commit when available, working-tree status,
-  and changed-file list.
+- Repository: branch, base and head commit, working-tree status, and
+  changed-file list. The head commit is mandatory: an unanchored repository
+  claim cannot be checked for decay.
 - Validation: commands, result, and the repository state they covered.
 
 Reuse unchanged summaries and direct links instead of fetching or rereading
@@ -123,6 +124,16 @@ current role must independently validate it, or the source is needed for a
 decision. QA must independently execute applicable checks, Review must inspect
 the complete diff, and Delivery must reverify current approval and merge
 evidence.
+
+Claims decay. Anchor every claim about repository state to the commit you
+observed it at, and re-verify against current head before restating it. This
+applies to your own earlier findings, not only to an upstream handoff: a
+finding repeated across handoffs gains the appearance of corroboration without
+gaining evidence.
+
+When you restate something you did not verify in the current turn, say where it
+came from and when. Never assert provenance — that a value, comment, or
+artifact derives from an approved source — unless you checked that source.
 
 Every agent handoff must begin with the compact artifact snapshot above. Do not
 paste complete Jira issues, Figma payloads, diffs, logs, or test output when a
