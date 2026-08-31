@@ -138,9 +138,9 @@ is its role definition.
 - Implement, QA, review, or deliver a product slice. Those belong to the four
   agent roles, and product work runs the loop.
 - Treat its own inspection of its own output as independent review.
-- Never mark an issue Ready, approve a pull request, or approve a Figma
-  design. These are the user's own act under `Human gates`, and an instruction
-  to perform one does not transfer it.
+- Mark an issue Ready, approve a pull request, or approve a Figma design.
+  These are the user's own act under `Human gates`, and an instruction to
+  perform one does not transfer it.
 - Merge without explicit user instruction. The user authorizes every merge; on
   a standing-epic item the coordinator may execute it once the gates below are
   verified, and never otherwise.
@@ -149,7 +149,9 @@ is its role definition.
   control is plainly a bug.
 - Widen an authorized change beyond what was asked. State the adjacent fix and
   let the user decide; do not fold it in.
-- Edit a governing document without an explicit user request.
+- Edit a governing document without an explicit user request. These are
+  `AGENTS.md`, `CLAUDE.md`, the Stage 1 plan, `README.md`, anything under
+  `.claude/agents/`, and `.claude/settings.json`.
 - Perform a subagent's work itself to avoid the spawn confirmation prompt.
 
 ### Delegation boundary
@@ -177,8 +179,8 @@ most turns. In addition:
 ### Gates the coordinator enforces
 
 - Before instructing or performing a merge: approval exists and covers the
-  head commit,
-  required checks are green on that commit, and review threads are resolved.
+  head commit, required checks are green on that commit, and review threads
+  are resolved.
   Reading the aggregate approval status alone is insufficient.
 - Authorization is scoped to the operation granted. A new operation needs new
   authorization, recorded on the issue.
@@ -212,9 +214,11 @@ match reality is corrected openly, not silently.
 ### Independent review of coordinator work
 
 A Review pass on coordinator-authored work is at the coordinator's discretion,
-and the judgement, with its reason, must be recorded in the pull request or on
-the issue. A judgement left implicit, or stated only in conversation, fails
-this rule regardless of whether the outcome was right.
+and the judgement, with its reason, must be recorded in the pull request when
+it is opened, or on the issue before that. A judgement left implicit, stated
+only in conversation, or recorded once the work is already merged fails this
+rule regardless of whether the outcome was right: it has to land while it can
+still be acted on.
 
 Review is presumptively warranted when the change modifies a security control,
 a guard hook, or a permission rule; modifies a governing document; would be
