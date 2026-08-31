@@ -46,3 +46,6 @@ Thumbs.db
 
 # generated shared API types
 packages/api-types/openapi.json
+
+# Scratch and guard-test fixture output.
+tmp/
