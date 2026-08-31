@@ -122,9 +122,15 @@ and
 All development agents are custom Claude Code agents. The user invokes them
 individually; project permissions require user confirmation before the `Agent`
 tool can spawn any of the six agents. A session started with
-`claude --agent <name>` is already an explicit user action. No coordinator
-agent, Jira trigger, unattended daemon, or event-driven orchestration is
-introduced.
+`claude --agent <name>` is already an explicit user action. No autonomous
+coordinator agent, Jira trigger, unattended daemon, or event-driven
+orchestration is introduced.
+
+This does not mean there is no orchestrator. The interactive Claude Code
+session the user drives is the coordinator: it invokes the agents, judges what
+they return, and delivers standing-epic items directly. It is a role with
+defined boundaries, not an absence. `AGENTS.md` holds its definition under
+`Coordinator`.
 
 | Agent/service | Responsibility | Permissions and limits |
 |---|---|---|
@@ -305,8 +311,10 @@ repository governance and tooling rather than product behaviour, so the agent
 loop costs more than it returns. The cost is that no independent role reads the
 change before the user does, and two items already in this epic exist precisely
 because coordinator-authored controls looked correct until an independent role
-read them. The user may still ask for a Review pass on any individual item;
-nothing here forbids it.
+read them. A Review pass on an individual item is at the coordinator's
+discretion under `AGENTS.md`, `Independent review of coordinator work`, which
+requires the judgement and its reason to be recorded. The user may also ask for
+one directly; nothing here forbids it.
 
 Scheduling and blocking:
 
@@ -472,7 +480,8 @@ links. Generated PDF copies are not required or maintained.
 - Agents perform all implementation, validation, PR, Jira-transition, and merge
   operations after task creation.
 - The user manually invokes every agent and gives the explicit merge command;
-  this is the Stage 1 substitute for an orchestrator.
+  this is the Stage 1 substitute for an *unattended* orchestrator. The
+  interactive session is the coordinator; see `AGENTS.md`, `Coordinator`.
 - Hosting, observability infrastructure, automated deployments, Jira-triggered
   agents, and Claude Agent for Jira are candidates for later stages.
 
