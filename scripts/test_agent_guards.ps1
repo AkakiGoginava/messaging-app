@@ -239,6 +239,27 @@ try {
         "Key: MSG-1`nDATABASE_URL=postgresql://user:pw@host/db"
     )
 
+
+    # MA-6 fixtures. `outside-body.md` sits above the project root; the symlink
+    # is created only where the platform permits it, and its case is skipped
+    # otherwise rather than silently passing.
+    $outsideRoot = [System.IO.Path]::GetFullPath(
+        (Join-Path $testRootBase ("agent-guard-outside-" + [guid]::NewGuid()))
+    )
+    $null = New-Item -ItemType Directory -Path $outsideRoot
+    $outsideBodyPath = Join-Path $outsideRoot "outside-body.md"
+    Set-Content -LiteralPath $outsideBodyPath -Value "Key: MSG-1`n`nOutside the project."
+
+    $symlinkBodyPath = Join-Path $testRoot "linked-body.md"
+    $symlinkSupported = $true
+    try {
+        $null = New-Item -ItemType SymbolicLink -Path $symlinkBodyPath `
+            -Target (Join-Path $testRoot ".env") -ErrorAction Stop
+    }
+    catch {
+        $symlinkSupported = $false
+    }
+
     $implementerGuard = Join-Path $projectPath ".claude/hooks/implementer-guard.ps1"
     $qaGuard = Join-Path $projectPath ".claude/hooks/qa-guard.ps1"
     $reviewGuard = Join-Path $projectPath ".claude/hooks/review-guard.ps1"
@@ -438,6 +459,24 @@ try {
             Allow = $false
         },
         @{
+            Name = "Delivery blocks duplicate --body-file flags"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file pr-body.md --body-file pr-body-secret.md"
+            }
+            Allow = $false
+        },
+        @{
+            Name = "Delivery blocks a body file outside the project"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file $outsideBodyPath"
+            }
+            Allow = $false
+        },
+        @{
             Name = "Delivery validates a body file on PR edit"
             Guard = $deliveryGuard
             Tool = "PowerShell"
@@ -470,6 +509,23 @@ try {
         }
     )
 
+    # Symlink creation needs Developer Mode or elevation on Windows. Skip
+    # loudly rather than silently passing a case that never ran.
+    if ($symlinkSupported) {
+        $cases += @{
+            Name = "Delivery blocks a .md symlink pointing at a secret"
+            Guard = $deliveryGuard
+            Tool = "PowerShell"
+            Input = @{
+                command = "gh pr create --base main --title 'MSG-1 guard test' --body-file linked-body.md"
+            }
+            Allow = $false
+        }
+    }
+    else {
+        Write-Warning "Skipped: symlink body-file case (symlinks unavailable on this host)."
+    }
+
     foreach ($case in $cases) {
         $result = Invoke-Guard `
             -Guard $case.Guard `
@@ -494,5 +550,17 @@ finally {
         )
     ) {
         Remove-Item -LiteralPath $testRoot -Recurse -Force
+    }
+
+    if (
+        $outsideRoot -and
+        (Test-Path -LiteralPath $outsideRoot) -and
+        $outsideRoot.StartsWith(
+            $testRootBase.TrimEnd("\", "/") +
+            [System.IO.Path]::DirectorySeparatorChar,
+            [System.StringComparison]::OrdinalIgnoreCase
+        )
+    ) {
+        Remove-Item -LiteralPath $outsideRoot -Recurse -Force
     }
 }

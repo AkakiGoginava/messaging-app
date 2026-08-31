@@ -104,30 +104,66 @@ function Test-PullRequestBodyFile {
     param(
         [string]$Command,
         [string]$WorkingDirectory,
+        [string]$ProjectPath,
         [string]$IssueKey
     )
 
-    $bodyFileMatch = [regex]::Match(
+    # `gh` honours the LAST --body-file when several are supplied, so matching
+    # only the first would validate one file while a second one is published.
+    # Reject the ambiguity rather than guessing which gh will use.
+    $bodyFileMatches = [regex]::Matches(
         $Command,
         '(?i)--body-file[=\s]+(?<q>["'']?)(?<path>[^"''\s]+)\k<q>'
     )
-    if (-not $bodyFileMatch.Success) {
+    if ($bodyFileMatches.Count -eq 0) {
         return $false
     }
+    if ($bodyFileMatches.Count -gt 1) {
+        Block-Action "only one --body-file may be supplied"
+    }
 
-    $requestedPath = $bodyFileMatch.Groups["path"].Value
+    $requestedPath = $bodyFileMatches[0].Groups["path"].Value
     $bodyPath = Get-NormalizedPath -Path $requestedPath -BasePath $WorkingDirectory
-
-    if ($bodyPath -match "(?i)(^|[\\/])\.env($|\.)|\.(pem|key|p12|pfx)$") {
-        Block-Action "a sensitive file cannot be used as a pull-request description"
-    }
-
-    if ([System.IO.Path]::GetExtension($bodyPath) -notin @(".md", ".txt")) {
-        Block-Action "the pull-request body file must be a .md or .txt file"
-    }
 
     if (-not (Test-Path -LiteralPath $bodyPath -PathType Leaf)) {
         Block-Action "the pull-request body file '$requestedPath' does not exist"
+    }
+
+    # Resolve a link before the checks below: an extension or sensitive-name
+    # test against the literal path is defeated by a .md symlink whose target
+    # is a secret.
+    $resolvedBodyPath = $bodyPath
+    try {
+        $bodyItem = Get-Item -LiteralPath $bodyPath -Force
+        if ($bodyItem.LinkTarget) {
+            $resolvedBodyPath = Get-NormalizedPath `
+                -Path $bodyItem.LinkTarget `
+                -BasePath ([System.IO.Path]::GetDirectoryName($bodyPath))
+        }
+    }
+    catch {
+        Block-Action "the pull-request body file could not be resolved"
+    }
+
+    # The literal path and its link target must both sit inside the project,
+    # matching the containment already enforced on the working directory.
+    $bodyProjectPrefix = $ProjectPath.TrimEnd("\", "/") +
+        [System.IO.Path]::DirectorySeparatorChar
+    foreach ($candidate in @($bodyPath, $resolvedBodyPath)) {
+        if (
+            -not $candidate.StartsWith(
+                $bodyProjectPrefix,
+                [System.StringComparison]::OrdinalIgnoreCase
+            )
+        ) {
+            Block-Action "the pull-request body file is outside the project"
+        }
+        if ($candidate -match "(?i)(^|[\\/])\.env($|\.)|\.(pem|key|p12|pfx)$") {
+            Block-Action "a sensitive file cannot be used as a pull-request description"
+        }
+        if ([System.IO.Path]::GetExtension($candidate) -notin @(".md", ".txt")) {
+            Block-Action "the pull-request body file must be a .md or .txt file"
+        }
     }
 
     if ((Get-Item -LiteralPath $bodyPath).Length -gt 65536) {
@@ -369,6 +405,7 @@ if ($command -match $pullRequestWritePattern) {
     $hasValidatedBodyFile = Test-PullRequestBodyFile `
         -Command $command `
         -WorkingDirectory $eventWorkingDirectory `
+        -ProjectPath $projectPath `
         -IssueKey $issueKey
 
     if ($command -match "^(?i)gh(?:\.exe)?\s+pr\s+create\b") {
