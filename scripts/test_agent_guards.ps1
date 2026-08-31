@@ -117,7 +117,8 @@ function Assert-GuardResult {
         [string]$Name,
         [hashtable]$Result,
         [bool]$ShouldAllow,
-        [string]$StdoutPattern = ""
+        [string]$StdoutPattern = "",
+        [string]$StderrPattern = ""
     )
 
     # A PreToolUse hook blocks a tool call only on exit code 2. Any other
@@ -151,6 +152,22 @@ function Assert-GuardResult {
         $Result.Stdout -notmatch $StdoutPattern
     ) {
         throw "$Name did not emit expected output pattern '$StdoutPattern'."
+    }
+
+    # Exit 2 alone does not identify why a guard blocked. An odd working
+    # directory reaches the "outside the project" rule and exits 2 through the
+    # normal path, with no exception involved -- so a fault case that only
+    # checks the exit code would pass even if the trap never fired. The fault
+    # cases assert the trap's own message instead of inferring it, which also
+    # removes the need to reason about which platform throws where.
+    if (
+        -not [string]::IsNullOrWhiteSpace($StderrPattern) -and
+        $Result.Stderr -notmatch $StderrPattern
+    ) {
+        throw (
+            "$Name did not emit expected stderr pattern '$StderrPattern'. " +
+            "stderr: $($Result.Stderr)"
+        )
     }
 }
 
@@ -259,7 +276,14 @@ try {
     )
 
 
-    # Hidden-attribute body files. Test-Path returns true for these but
+    # Hidden-attribute body files. On Unix the Hidden attribute has no effect
+    # on a name that does not begin with a dot, so these two cases degrade to
+    # ordinary body-file cases there rather than failing. That is acceptable --
+    # the fail-open they pin is Windows-only -- but it is stated here because
+    # the over-long-path cases below are gated and warned about, and silently
+    # weaker coverage is the pattern this issue exists to remove.
+    #
+    # Test-Path returns true for these but
     # Get-Item without -Force throws, which on main exited 1 -- so the command
     # proceeded with the body wholly unvalidated: no size cap, no credential
     # scan, no Jira-key check. A hidden .md arrives by ordinary means, such as
@@ -555,6 +579,7 @@ try {
             Input = @{ command = "git status --short" }
             Cwd = $nulCwd
             Allow = $false
+            Stderr = "failed unexpectedly"
         }
 
         if ($isWindowsHost) {
@@ -565,6 +590,7 @@ try {
                 Input = @{ command = "git status --short" }
                 Cwd = $overLongCwd
                 Allow = $false
+                Stderr = "failed unexpectedly"
             }
         }
     }
@@ -586,7 +612,8 @@ try {
             -Name $case.Name `
             -Result $result `
             -ShouldAllow $case.Allow `
-            -StdoutPattern $case.Output
+            -StdoutPattern $case.Output `
+            -StderrPattern $case.Stderr
     }
 
     Write-Output "All $($cases.Count) agent guard checks passed."
