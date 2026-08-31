@@ -122,9 +122,15 @@ and
 All development agents are custom Claude Code agents. The user invokes them
 individually; project permissions require user confirmation before the `Agent`
 tool can spawn any of the six agents. A session started with
-`claude --agent <name>` is already an explicit user action. No coordinator
-agent, Jira trigger, unattended daemon, or event-driven orchestration is
-introduced.
+`claude --agent <name>` is already an explicit user action. No autonomous
+coordinator agent, Jira trigger, unattended daemon, or event-driven
+orchestration is introduced.
+
+This does not mean there is no orchestrator. The interactive Claude Code
+session the user drives is the coordinator: it invokes the agents, judges what
+they return, and delivers standing-epic items directly. It is a role with
+defined boundaries, not an absence. `AGENTS.md` holds its definition under
+`Coordinator`.
 
 | Agent/service | Responsibility | Permissions and limits |
 |---|---|---|
