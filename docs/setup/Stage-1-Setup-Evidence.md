@@ -125,12 +125,14 @@ without deferred features.
   `Not applicable yet`
 
 These story keys become required only after the Issue Analyst drafts them and
-the user reviews and creates the final Jira work items. Only the user may mark
+the user reviews them, whether the user creates the final Jira work items or
+confirms their creation by the coordinating session. Only the user may mark
 them `Ready`.
 
 For each created story, verify:
 
-- The user created the final work item.
+- The work item was created by the user, or by the coordinating session on
+  per-call user confirmation.
 - Scope, non-goals, acceptance criteria, dependencies, and tests are present.
 - Approved Figma links are present when UI behavior is affected.
 - Jira history shows that the user marked the item `Ready`.

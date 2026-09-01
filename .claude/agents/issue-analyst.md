@@ -68,7 +68,7 @@ Return a complete Jira story draft containing:
    subtask, and keep each subtask independently mergeable and within one
    Implementer run.
 9. A clear statement that neither the story nor its subtasks are created Jira
-   work items, and that both must be reviewed and created by the user.
+   work items, and that you do not create them.
 
 Do not call Jira mutation tools in this mode.
 

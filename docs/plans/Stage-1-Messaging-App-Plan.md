@@ -140,7 +140,7 @@ defined boundaries, not an absence. `AGENTS.md` holds its definition under
 | QA Agent | Run unit, integration, browser, accessibility, and security scenarios; add test-only changes | May edit tests; product-code failures return to the Implementer |
 | Review Agent | Independently inspect the diff for correctness, authorization, regressions, unnecessary scope, and acceptance-criteria coverage | Read-only; publishes blocking/non-blocking findings |
 | Delivery Agent | Create branches, commit/push approved work, open/update PRs, update Jira, and perform the final merge | Cannot edit product code or bypass protection; merges only after explicit user approval |
-| Jira Cloud | Source of truth for scope, acceptance criteria, ownership, status, and decisions | User personally reviews and creates every work item |
+| Jira Cloud | Source of truth for scope, acceptance criteria, ownership, status, and decisions | User personally reviews every work item and alone marks it `Ready`; the coordinating session (see `AGENTS.md`, `Coordinator`) may create items on per-call user confirmation |
 | Figma | Source of truth for responsive UI and state designs | User must approve frames before related work becomes Ready |
 | GitHub | Repository, PRs, reviews, checks, and audit history | Protected `main`; required checks and one human approval |
 | GitHub Actions | Executes deterministic quality gates | No automatic merge |
@@ -246,7 +246,8 @@ Sizing signals:
 - If an Implementer needs a second run for any reason other than QA or review
   findings, the subtask was too large. Land what is complete and move the
   remainder into a new subtask instead of extending the current one.
-- Only the user creates subtasks, and only the user marks each one `Ready`.
+- Subtasks are created by the user, or by the coordinating session on per-call
+  user confirmation. Only the user marks each one `Ready`.
 
 ### Standing epics and non-slice work
 
@@ -339,7 +340,8 @@ unrelated issue.
    and test expectations, together with a proposed subtask breakdown that
    satisfies `Story and task decomposition`. The breakdown must map every
    acceptance criterion to exactly one subtask and state the intended order.
-5. Personally edit and create the story and its subtasks. Only the user may
+5. Personally edit and approve the story and its subtasks, creating them or
+   confirming their creation by the coordinating session. Only the user may
    mark an issue `Ready`.
 
 ### Per story, before its first subtask
@@ -410,7 +412,7 @@ and non-slice work`.
 5. Instruct the Delivery Agent to transition the story to `Done` with links to
    every merged PR and the closeout evidence. The story itself closes without a
    feature pull request.
-6. Handle follow-up work through new user-created Jira items rather than
+6. Handle follow-up work through new Jira items rather than
    silently expanding a completed story.
 
 ## 5. Test Plan, Acceptance, and Plan Maintenance
@@ -476,7 +478,9 @@ links. Generated PDF copies are not required or maintained.
 - The custom backend runs on Node.js with local PostgreSQL through Docker
   Compose.
 - Figma designs are agent-drafted but human-approved.
-- The user personally creates Jira items and is the required GitHub reviewer.
+- Jira items are created by the user, or by the coordinating session on
+  per-call user confirmation. The user alone marks an item `Ready` and is the
+  required GitHub reviewer.
 - Agents perform all implementation, validation, PR, Jira-transition, and merge
   operations after task creation.
 - The user manually invokes every agent and gives the explicit merge command;
