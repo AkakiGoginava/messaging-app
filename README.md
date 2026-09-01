@@ -287,7 +287,8 @@ Use the issue-analyst agent in ASSESS READY ISSUE mode for PROJECT-123.
 The analyst can inspect approved Figma frames and may post a readiness-blocker
 comment only after user confirmation. It cannot create or transition Jira
 issues, mark an issue Ready, or modify repository files. The user personally
-reviews and creates every final Jira work item.
+reviews every final Jira work item and is the only one who marks it Ready; the
+coordinating session may create the item on explicit per-call confirmation.
 
 ### Handoff
 
@@ -503,9 +504,8 @@ description.
 The Delivery Agent opens pull requests as `akakiGoginavaAgent` and requests
 `AkakiGoginava` as the human reviewer.
 
-Project permissions in `.claude/settings.json` deny Jira issue creation and
-field editing through Rovo MCP and require user confirmation before Jira
-comments or transitions.
+Project permissions in `.claude/settings.json` require user confirmation before
+Jira issue creation, field editing, comments, and transitions through Rovo MCP.
 
 ### Handoff
 

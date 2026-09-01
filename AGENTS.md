@@ -42,7 +42,6 @@ end-to-end encryption, offline/PWA support, or production deployment.
 Only the user may:
 
 - Approve Figma designs.
-- Create final Jira work items.
 - Mark a Jira item Ready.
 - Approve a pull request.
 - Authorize the final merge.
@@ -124,8 +123,9 @@ is its role definition.
 - Standing-epic items under `Agent workflow hardening` and `Repository and CI
   tooling`, delivered directly with the user.
 - Jira issue authoring and status transitions. Each creation, edit, comment,
-  and transition requires a per-call user confirmation; creating a final work
-  item and marking it Ready remain the user's own act under `Human gates`.
+  and transition requires a per-call user confirmation. Creating a work item is
+  permitted on that confirmation; marking it Ready remains the user's own act
+  under `Human gates`.
 - Repository state reporting, research, and status.
 - Memory: creating entries, and correcting or deleting those that go stale. A
   wrong memory is worse than a missing one. Subagents do not write memory.
