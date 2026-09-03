@@ -122,10 +122,11 @@ is its role definition.
 - Judging returned work and deciding whether it is acceptable.
 - Standing-epic items under `Agent workflow hardening` and `Repository and CI
   tooling`, delivered directly with the user.
-- Jira issue authoring and status transitions. Each creation, edit, comment,
-  and transition requires a per-call user confirmation. Creating a work item is
-  permitted on that confirmation; marking it Ready remains the user's own act
-  under `Human gates`.
+- Jira issue authoring, priority, and status transitions. Each creation, edit,
+  comment, and transition requires a per-call user confirmation. Creating a
+  work item is permitted on that confirmation; marking it Ready remains the
+  user's own act under `Human gates`. Every item the coordinator creates
+  carries a priority chosen against `Priority` below.
 - Repository state reporting, research, and status.
 - Memory: creating entries, and correcting or deleting those that go stale. A
   wrong memory is worse than a missing one. Subagents do not write memory.
@@ -185,6 +186,36 @@ most turns. In addition:
 - Authorization is scoped to the operation granted. A new operation needs new
   authorization, recorded on the issue.
 - Approval in one context does not extend to the next.
+
+### Priority
+
+Every Jira item carries a priority chosen against this rubric, in every epic —
+the Stage 1 product epic, the standing epics, and the hardening epic alike.
+Jira's implicit `Medium` is an unset field rather than a decision, and a
+backlog where a blocking defect and a docs cleanup look identical encodes no
+ordering at all.
+
+| Priority | Meaning in this project |
+|---|---|
+| Highest | Blocks all other work, or an active security or cross-user-isolation defect on `main` |
+| High | Security or correctness defect, a broken guard or gate, or the item on the critical path to the next demoable slice |
+| Medium | Normal scheduled work — the honest default, chosen rather than fallen back to |
+| Low | Cleanup, tooling polish, docs; deferrable at no cost |
+| Lowest | Parked with no scheduled owner, with the blocker named |
+
+- A parked or blocked item is `Lowest` whatever its subject matter, and the
+  blocker is named on the item. Severity and schedulability are different
+  axes, and conflating them is what makes a backlog lie.
+- The proposed priority and its one-line reason belong in the same
+  confirmation prompt that asks the user to approve creating the item, so the
+  priority is approved with the item instead of being set silently afterwards.
+- A Subtask inherits its parent Story's priority unless it differs for a
+  stated reason.
+
+Priority is a scheduling signal, not a human gate. It grants no approval and
+withholds none, and raising it is never a route around anything under `Human
+gates`. A priority that no longer matches reality is corrected openly, on the
+same terms as a status that does not match reality.
 
 ### Status transitions
 

@@ -1,7 +1,7 @@
 # Stage 1 - Messaging MVP and Human-Gated Agent Workflow
 
-**Version:** 1.5  
-**Date:** 2026-08-26  
+**Version:** 1.6  
+**Date:** 2026-09-03  
 **Status:** Project foundation  
 **Source:** User-approved direction transferred from the prior project chat
 
@@ -9,6 +9,7 @@
 
 | Version | Date | Status | Summary |
 |---|---|---|---|
+| 1.6 | 2026-09-03 | Project foundation | Made work-item priority a deliberate decision recorded at creation, in every epic, with the rubric held in `AGENTS.md`; added the Jira `Priority` field to one-time setup and recorded the two Jira behaviours that make a priority claim hard to verify. |
 | 1.5 | 2026-08-26 | Project foundation | Replaced the one-story-per-vertical-slice unit of delivery with Story plus functionality-scoped Subtask decomposition, moved the branch, pull-request, and merge boundary to the subtask, and added task sizing rules and a story closeout pass; introduced two scope-separated standing epics for non-slice work, handled outside the subagent loop; removed the version from the plan filename. |
 | 1.4 | 2026-08-03 | Project foundation | Password policy changed to a 12-128 character minimum with at least one uppercase letter and one digit, replacing the plain 15-128 character length rule. |
 | 1.3 | 2026-07-30 | Project foundation | Removed generated PDF distribution and renderer requirements; Markdown is now the sole maintained plan artifact. |
@@ -140,7 +141,7 @@ defined boundaries, not an absence. `AGENTS.md` holds its definition under
 | QA Agent | Run unit, integration, browser, accessibility, and security scenarios; add test-only changes | May edit tests; product-code failures return to the Implementer |
 | Review Agent | Independently inspect the diff for correctness, authorization, regressions, unnecessary scope, and acceptance-criteria coverage | Read-only; publishes blocking/non-blocking findings |
 | Delivery Agent | Create branches, commit/push approved work, open/update PRs, update Jira, and perform the final merge | Cannot edit product code or bypass protection; merges only after explicit user approval |
-| Jira Cloud | Source of truth for scope, acceptance criteria, ownership, status, and decisions | User personally reviews every work item and alone marks it `Ready`; the coordinating session (see `AGENTS.md`, `Coordinator`) may create items on per-call user confirmation |
+| Jira Cloud | Source of truth for scope, acceptance criteria, ownership, priority, status, and decisions | User personally reviews every work item and alone marks it `Ready`; the coordinating session (see `AGENTS.md`, `Coordinator`) may create items on per-call user confirmation, setting a priority per `Work item priority` |
 | Figma | Source of truth for responsive UI and state designs | User must approve frames before related work becomes Ready |
 | GitHub | Repository, PRs, reviews, checks, and audit history | Protected `main`; required checks and one human approval |
 | GitHub Actions | Executes deterministic quality gates | No automatic merge |
@@ -170,7 +171,10 @@ and
 
 1. Create the GitHub repository and enable protected-branch rules.
 2. Create a Jira project with `Backlog`, `Ready`, `In Progress`, `In Review`,
-   and `Done`.
+   and `Done`. Add the `Priority` field to the layout of every issue type in
+   use, including subtasks and epics. A team-managed project omits it by
+   default, and an issue then reports `Medium` because the field is unset, not
+   because anyone chose it. See `Work item priority`.
 3. Create the Stage 1 Jira epic, and the two standing epics described in
    `Standing epics and non-slice work`.
 4. Prepare the setup-phase Figma structure:
@@ -248,6 +252,37 @@ Sizing signals:
   remainder into a new subtask instead of extending the current one.
 - Subtasks are created by the user, or by the coordinating session on per-call
   user confirmation. Only the user marks each one `Ready`.
+
+### Work item priority
+
+Every work item carries a priority chosen when it is created, in every epic —
+the Stage 1 product epic, both standing epics, and any hardening epic alike.
+The five bands and the rules attached to them are defined once, in `AGENTS.md`
+under `Coordinator` → `Priority`, and are not restated here so the two
+documents cannot drift apart.
+
+Priority is a scheduling signal only. It is not one of the human gates: raising
+or lowering it grants no approval, withholds none, and never substitutes for
+marking an item `Ready`, approving a pull request, or authorizing a merge.
+
+Two Jira behaviours make a priority claim harder to verify than it looks, and
+both were measured in this project on 2026-09-03:
+
+- **Create metadata does not describe what a create call accepts.**
+  `getJiraIssueTypeMetaWithFields` continued to omit `priority` from the field
+  list for both Task and Story after the field was added to the project layout,
+  while a create call setting it succeeded. Confirm a field against a real
+  write rather than concluding from metadata that one is unavailable.
+- **Setting a priority that already reads `Medium` is a silent no-op.** It
+  produces no changelog entry and does not move the `updated` timestamp, so an
+  unset field and a deliberate `Medium` are indistinguishable through the API.
+  A "every item has a priority" check therefore cannot be evidenced for the
+  `Medium` band, and a report that claims otherwise is overstating what was
+  observed.
+
+State the proposed priority and its one-line reason in the same confirmation
+prompt that asks the user to approve creating the item, so the priority is
+approved alongside the item rather than set afterwards without review.
 
 ### Standing epics and non-slice work
 
@@ -501,6 +536,7 @@ links. Generated PDF copies are not required or maintained.
 | Delivery control | Human-reviewed, protected, squash-merged pull requests |
 | Work decomposition | Story per vertical slice; functionality-scoped subtask is the unit of branch, PR, and merge |
 | Non-slice work | Two standing epics — `Agent workflow hardening` (governs the agents) and `Repository and CI tooling` (affects any contributor) — holding independent story-level Tasks; never completed and do not gate Stage 1 |
+| Work item priority | Chosen at creation in every epic against the rubric in `AGENTS.md`; a scheduling signal, never a gate; parked or blocked items are `Lowest` whatever their subject matter |
 | Agent orchestration | Manual invocation only; `Agent(<name>)` requires user confirmation and `claude --agent <name>` is user-started; no unattended coordinator |
 | Deployment | Deferred beyond Stage 1 |
 
