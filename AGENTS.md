@@ -340,12 +340,15 @@ is that boundary, and it holds whatever the permission file says. Do not cite a
 deny rule as evidence that a secret cannot be read, and do not reach for a glob
 to get around one.
 
-The project settings file is also not the only source of permission rules. A
-user-scope or local settings file — `.claude/settings.local.json` is untracked
-and can be invisible to a reviewer — carries its own `allow` list, so a rule's
-presence in the project file does not by itself establish that it is in force.
-Which source wins a conflict is unconfirmed here; check the effective behaviour
-rather than reading the project file alone.
+The project settings file is not the only source of permission rules. An
+untracked local file — `.claude/settings.local.json` — carries its own `allow`
+list and never appears in review. A local `allow` does not quietly loosen a
+stricter project rule: three Jira writes listed in the project `ask` and in the
+local `allow` each prompted, so the `ask` held. That is one conflict shape
+observed once, not a general precedence rule. What a local file does do is
+grant tools the project file never mentions, which is how broad entries like
+`Bash(git *)` come to be auto-approved without appearing in any reviewed file.
+Read the effective permission set rather than the project file alone.
 
 Verified at `639f365` on decoy files carrying canary values, never a real
 secret. Re-verify before relying on any of this. It describes harness behaviour
