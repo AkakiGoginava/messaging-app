@@ -314,3 +314,41 @@ or blocked out-of-role action only when it affected the result.
   duplicate registration over mirroring rules across both.
 - Report a control that does not enforce what it claims; never route around it
   quietly, and never treat its existence as proof that it works.
+
+### What a deny rule enforces
+
+The `deny` entries in `.claude/settings.json` cover secret paths — `.env`,
+`*.pem`, `*.key`. They are enforced, and they reach further than their
+`Read(...)` spelling suggests: an allowed shell reader that names a denied path
+is refused too, so `cat apps/api/.env`, `head`, `grep`, a stdin redirect, and
+`Get-Content` all fail the way the `Read` tool does. A file beside it in the
+same directory still reads normally, so the refusal is path-specific and not a
+blanket block on the directory.
+
+The match is against the literal argument, not the resolved path. `cat
+apps/api/.env` is refused and `cat apps/api/.env*` is not, though both print the
+same file. Any form that avoids spelling the path out — a glob above all —
+defeats the rule. The auto-mode classifier catches some of what gets past it,
+including `../`-normalised paths, but a plain trailing-`*` glob went through, so
+treat it as a second opinion rather than a backstop.
+
+A deny rule therefore stops a mistaken read, not a determined one, which is the
+adversary it is written against: a mistaken agent, not an attacker, consistent
+with the threat model recorded on MA-6. Treat the list as an error-catching
+guard and never as the boundary that keeps a secret safe. The first bullet above
+is that boundary, and it holds whatever the permission file says. Do not cite a
+deny rule as evidence that a secret cannot be read, and do not reach for a glob
+to get around one.
+
+The project settings file is also not the only source of permission rules. A
+user-scope or local settings file — `.claude/settings.local.json` is untracked
+and can be invisible to a reviewer — carries its own `allow` list, so a rule's
+presence in the project file does not by itself establish that it is in force.
+Which source wins a conflict is unconfirmed here; check the effective behaviour
+rather than reading the project file alone.
+
+Verified at `639f365` on decoy files carrying canary values, never a real
+secret. Re-verify before relying on any of this. It describes harness behaviour
+that has already changed once: the shell readers auto-approved denied paths
+outright when MA-7 was filed, and closed that gap on their own before it was
+worked.
